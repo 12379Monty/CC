@@ -1,0 +1,2418 @@
+---
+title: "Classification and Clustering: Case Study with CRC Gene Expression Data"
+author: "Francois Collin"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  BiocStyle::html_document:
+    toc: true
+    # does this have an effect
+    fig_caption: yes    
+    # this has no effect
+    number_sections: yes
+bibliography: ../../bibFiles/CRC.bib
+#csl: ../../bibFiles/acm-sig-proceedings.csl  - doest work with pandoc-siteproc
+csl: ../../bibFiles/cell-numeric.csl
+#biblio-style: acm
+link-citations: true
+vignette: >
+ %\VignetteEncoding{UTF-8}
+---
+
+<style type="text/css">
+
+body{ /* Normal  */ 
+ font-size: 16px; 
+}
+td {  /* Table  */ 
+ font-size: 12; 
+}
+h1.title { 
+ font-size: 28px; color: DarkGreen; 
+}
+h1 { /* Header 1 */ 
+ font-size: 24px; color: DarkBlue; 
+}
+h2 { /* Header 2 */ 
+ font-size: 18px; color: DarkBlue; 
+}
+h3 { /* Header 3 */ 
+ font-size: 18px;
+ font-family: "Times New Roman", Times, serif;
+ color: DarkBlue;
+}
+code.r{ /* Code block */
+    font-size: 12px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 14px;
+}
+</style>
+
+```{r GlobalOptions, results="hide", include=FALSE, cache=FALSE}
+knitr::opts_knit$set(stop_on_error = 2L) #really make it stop
+#knitr::dep_auto()
+```
+<!-- ######################################################################## -->
+
+
+```{r Prelims, include=FALSE, echo=FALSE, results='hide', message=FALSE} 
+
+ FN <- "M1A-CRC"
+
+ suppressMessages(require(rmarkdown))
+ suppressMessages(require(knitr))
+ options(stringsAsFactors=F) 
+
+ # Shotcuts for knitting and redering while in R session
+ kk <- function(n='') knit2html(paste("Scripts/t", n, sep=''), envir=globalenv(),
+       output=paste('Scripts/',FN,".html", sep=''))
+
+ rr <- function(n='') render(paste("Scripts/t", n, sep=''), envir=globalenv(),
+       output_file=paste(FN,".html", sep=''), output_dir='Scripts')
+
+ bb <- function(n='') browseURL(paste('Scripts/',FN,".html", sep=''))
+
+ # The usual shorcuts
+ zz <- function(n='') source(paste("Scripts/t", n, sep=''))
+
+ if(file.exists('/Users/francois/Dropbox/PredictiveModeling/CC/R/'))
+ WRKDIR <- '/Users/francois/Dropbox/PredictiveModeling/CC/R/'  else
+ WRKDIR <- '/mnt100/home/Dropbox/PredictiveModeling/CC/R/'
+
+ suppressMessages(require(rmarkdown))
+ suppressMessages(require(knitr))
+ options(stringsAsFactors=F)
+
+ # Shotcuts for knitting and redering while in R session
+ kk <- function(n='') knit2html(paste("Scripts/t", n, sep=''), envir=globalenv(),
+       output=paste('Scripts/',FN,".html", sep=''))
+
+ rr <- function(n='') render(paste("Scripts/t", n, sep=''), envir=globalenv(),
+       output_file=paste(FN,".html", sep=''), output_dir='Scripts')
+
+ bb <- function(n='') browseURL(paste('Scripts/',FN,".html", sep=''))
+
+ # The usual shorcuts
+ zz <- function(n='') source(paste("Scripts/t", n, sep=''))
+
+ if(file.exists('/Users/francois/Dropbox/PredictiveModeling/CC/R/'))
+ WRKDIR <- '/Users/francois/Dropbox/PredictiveModeling/CC/R/'  else
+ WRKDIR <- '/mnt100/home/Dropbox/PredictiveModeling/CC/R/'
+
+ if(!file.exists(WRKDIR)) stop("WRKDIR ERROR", WRKDIR)
+
+ # do once
+ #setwd(WRKDIR)
+
+ # file rmarkdown file management options: cache, figures
+ cache_DIR <- file.path(WRKDIR, 'Scripts', 'cache/M1A/')
+ suppressMessages(dir.create(cache_DIR, recursive=T))
+ opts_chunk$set(cache.path=cache_DIR)
+
+ figure_DIR <- file.path(WRKDIR, 'Scripts', 'figure/M1A/')
+ suppressMessages(dir.create(figure_DIR, recursive=T))
+ opts_chunk$set(fig.path=figure_DIR)
+
+ #table_DIR <- file.path(WRKDIR, 'Scripts', 'table/M1A/')
+ #suppressMessages(dir.create(table_DIR, recursive=T))
+ #opts_chunk$set(fig.path=table_DIR)
+ 
+ # need a local copy of help_DIR
+ #help_DIR <- file.path(WRKDIR, 'help_files')
+ help_DIR <- file.path('.', 'help_files')
+ suppressMessages(dir.create(help_DIR, recursive=T))
+ 
+ temp_DIR <- file.path(WRKDIR, 'temp_files')
+ suppressMessages(dir.create(temp_DIR, recursive=T))
+
+ if(file.exists('/Users/francois/Dropbox/PredictiveModeling/CC/'))
+ ROOT <- '/Users/francois/Dropbox/PredictiveModeling/CC/'  else
+ ROOT <- '/mnt100/home/Dropbox/PredictiveModeling/CC/'
+
+ EXT_DATA <- file.path(ROOT, 'extData')
+
+```
+<!-- ######################################################################## -->
+
+
+*** 
+```{r utilityFns, echo=FALSE}
+ # Here we define some utility functions
+
+ # Save and load
+ ##################################################
+ # save single object with name ObjName  to file FileName
+ saveObj <- function(FileName='', ObjName='', DataDir=file.path(WRKDIR, 'Data')){
+  assign(FileName, get(ObjName))
+  save(list=FileName, file=file.path(DataDir, FileName))
+  rm(list=FileName)
+ }
+
+ # load single object stored in FileName and assign to ObjName in local env
+ loadObj <- function(FileName='', ObjName='', DataDir=file.path(WRKDIR, 'Data')){
+  load(file.path(DataDir, FileName))
+  assign(ObjName, get(FileName),pos=1)
+  rm(list=FileName)
+ }
+
+ # Copy def to help_DIR
+ dput(saveObj, file.path(help_DIR, 'saveObj.r'))
+ dput(loadObj, file.path(help_DIR, 'loadObj.r'))
+
+
+ # timing 
+ ##################################################
+ startTimedMessage <- function(...) {
+        x <- paste0(..., collapse='')
+        message(x, appendLF=FALSE)
+        ptm <- proc.time()
+        return(ptm)
+ }
+ stopTimedMessage <- function(ptm) {
+        time <- proc.time() - ptm
+        message(" ", round(time[3],2), "s")
+ }
+
+ # help
+ ################################################
+ static_help <- function(pkg, topic, out, links = tools::findHTMLlinks()) {
+  pkgRdDB = tools:::fetchRdDB(file.path(find.package(pkg), 'help', pkg))
+  force(links)
+  tools::Rd2HTML(pkgRdDB[[topic]], out, package = pkg,
+                 Links = links, no_links = is.null(links))
+ }
+
+ # kappa for cluserinf aggreement with labels
+ ################################################
+ getKappa <- function(Clustering.v, Labels.v)
+  {
+     require(concord)
+     # Reorder if names are availableo
+     if(!is.null(names(Clustering.v)))
+     Labels.v <- Labels.v[names(Clustering.v)]
+
+     MS_1.v  <- as.numeric(as.character(factor(Labels.v,
+                  level=c('MSS', 'MSI'), labels=c(1,2))))
+     MS_2.v  <- as.numeric(as.character(factor(Labels.v,
+                  level=c('MSS', 'MSI'), labels=c(2,1))))
+     kappa.1 <- cohen.kappa(cbind(MS_1.v, Clustering.v))
+     kappa.2 <- cohen.kappa(cbind(MS_2.v, Clustering.v))
+     max(kappa.1$kappa.c,kappa.2$kappa.c)
+
+     kappa.v <- round(max(kappa.1$kappa.c,kappa.2$kappa.c),2)
+  }
+ dput(getKappa, file.path(help_DIR, 'getKappa.r'))
+
+ # add contingecny table to margen of plot
+ ################################################
+ mtext2by2Tbl <- function(Tbl, LL=8)
+ {
+   mtext(side=1, outer=F, line=LL,
+         paste("Pred:  ", paste(colnames(Tbl), collapse='   '), collapse='    '))
+   LL <- LL + 1
+   mtext(side=1, outer=F, line=LL,
+         paste(" 1: ", paste(Tbl[1,], collapse='   '), collapse='    '))
+
+  if(dim(Tbl)[1] >1) {
+   LL <- LL + 1
+   mtext(side=1, outer=F, line=LL,
+         paste(" 2: ", paste(Tbl[2,], collapse='   '), collapse='    '))
+  }
+ }
+ dput(mtext2by2Tbl, file.path(help_DIR, 'mtext2by2Tbl.r'))
+
+```
+<!-- ######################################################################## -->
+
+
+<!-- NOT SURE WHAT IS THE BEST PLACE TO PUT THIS -->
+
+```{r runParam, echo=FALSE}
+ # Top 10% highest variance genes
+ SelGenes <- 'Top10VarGenes'
+
+ # Predictive Modeling Parameters
+ CV <- list(Num=5, Rep=10)
+
+ # Continue to work with Train data set and top 10% most variable genes
+ # SEE NOTE ABOVE ABOIUT VARIABILITY SELECTION!
+ SelGenes <- 'Top10VarGenes'
+
+ # Clustering parameters
+ DM <-  "euclidean"
+ # Set standardize flag
+ STAND <- TRUE
+
+```
+<!-- ######################################################################## -->
+
+
+***
+# Background
+
+Approximately 15 % of colorectal carcinomas (CRC) display high level microsatellite instability (MSI-H) due to either a germline mutation in one of the genes responsible for DNA mismatch repair or somatic inactivation of the same pathway 
+[@Guinney:2015aa].  MSI is defined using the five primary microsatellite loci recommended at the 1997 National Cancer Institute-sponsored conference on MSI for the identification of MSI or replication errors in colorectal cancer [@Boland:1998aa]:
+
+* 2 mononucleotide repeat markers: BAT25 and BAT26
+* 3 dinucleotide repeat markers: D2S123, D5S346 and D17S250
+
+
+Tumors are characterized as MSI-H if two or more of the five markers show instability (i.e., have insertion/deletion mutations) and MSI-L if only one of the five markers shows instability.  Note that the distinction between MSI-L and MSS can only be accomplished if a greater number of markers is utilized.  MSS and MSI CRC may have different prognoses and response to treatment. 
+
+# Outline
+
+In this vignette we will download gene expression datasets from the Gene Expression Omnibus web site [GEO](https://www.ncbi.nlm.nih.gov/geo/) which have
+MSI status as part of clinical sample charactistics and use these data to illustrate some gene expression data analysis steps:
+
+- Data Preprocessing.
+- Building a classifier to predict microsatellite instability status based on gene expression profiles.
+- Discovering new sub-classes among CRC samples.
+
+
+The main objectives of this vignette are:
+
+- to demonstrate the use of R markdown to ensure reproducible research, and
+- to demonstrate some of the capabilities of the `caret` R package.
+
+The [knitr](https://yihui.name/knitr/) R package greatly
+facilitates the use of R markdown to integrate data analysis and report writing
+into a single process.  This entire report, including all data downloads and
+processing can be reproduced by running a single R markdown script.  Some of the
+data analysis steps may be time comsuming, but  `kntr` provides easy ways to
+deal with these contingencies through neat caching capabilities.
+
+The [caret](https://topepo.github.io/caret/index.html) R package provides
+a extensive set of tools for predictive modeling.  A very large selection
+of modeling approaches can be invoked through a common interface and 
+tools facilitate the process of implementing data splitting schemes to enable
+hyper-parameter tuning through cross-validation and to produce reliable 
+and comparable model performance estimates.
+
+## Data Preprocessing
+
+An important consideration when assembling a dataset for use in analyses aimed at answering scientific questions is how the data should pre-processed.  One of the main objectives of the pre-processing step is to remove technical variability without removing the biological variability of interest.  Some of the technical variability that affects microarraty gene expression data are sample to sample variability due to differences in starting material quality and sample preparation effects.  These sources of variablity are commonly handled by a pre-processing step known as *normalization*.  Even after normalization, some shared variability may be present.  This shared variability may be due to samples being processed at different time points, in different labs, using different instruments, etc.  These effects are commonly referred to as *batch effects*.  Options to remove batch effects include [@Lazar:2013aa]:
+
+* Quantile normalization [@Bolstad:2003aa] (the baseline approach, which doesn't truly
+address batch effects)
+* RUV method [@Gagnon-Bartsch:2012aa]
+* sva method [@Leek:2012aa]
+
+Selecting the method of normalization and batch correction that is most appropriate for a given problem requires careful analysis.  It is helpful to follow proper experimental design practices when collecting the data including:
+
+* processing the samples in a manner that avoids confounding batching and biological effects
+* incorporating controls in the dataset, both positive and negative at both the sample and gene level
+
+In this analysis we will simply use quantile normalization to renormalize the
+data after pooling across datasets and verify that egregious batch effects are not present.  We could subsequently repeat this analysis using a more sophisticated form of normalization and batch correction and assess the benefits that it brings to the analysis results.  Such an assessment is never trivial.
+
+## Affymetrix Probe Sets vs Genes
+
+Affymetrix expression data are organized in probe sets which target genes [@Irizarry:2003aa].
+There may be several probe sets for a given gene and the association between the two also depends
+on which gene annotation is used (eg. HUGO vs Entrez).  Probe sets
+which target a given gene sometimes yield discordant gene expression
+estimates making reducing the probe set data to gene level estiamtes
+somewhat problematic.  For these reasons, we will use the probe set as a gene
+expression unit of analysis here. This should not affect classification
+or clustering performance.  When it comes to the intrepretation of a
+particular predictive model, we can bring in the gene annotation associated
+with each probe set at this point without (much) loss of generality.
+
+We should also note that some probe sets are known to cross-hybridize or
+not hybridize specifically to the targeted gene's genomic sequence.  We will not
+pre-filter genes based on this information.
+
+
+## Building a Classifier
+
+Following pre-processing, the pooled dataset will be used to investigate the performance of
+various classification methods to predict msi status from gene expression data.  The pooled dataset
+will then be split into **Train** and **Test** subsets.  Following the split, the **Test** subset
+is to be excluded from all analyses until we are ready to evaluate the final selection of predictive models
+ under consideration.  During the analysis, the **Train** dataset will be further sub-divided into
+**Fit** and **Validation** subsets for the purpose of model selection and hype-parameter tuning.
+The Test set is not interrogated until the final model assessment step to ensure that it provides
+a reliable set of data to assess the performance of the predcitive models.
+When the size of the dataset is small, it is
+tempting to rely on cross-validated measures of performance instead of a  Test set.  We will compare the
+two measures in this exercise to see if they lead to different orderings of the classifiers or drastically
+different measures of performance.
+
+
+When analyzing gene expression data for classification purposes, or to extract
+biologically meaningful gene signatures, it is customary to first subset genes.
+The primary reason for this subsetting step is for computational purposes -
+including all of the genes in the analysis may require too much memory
+or computing time for some steps.  A common approach used is to
+apply a gene expression variability threshold for genes to be included in
+the analysis - genes that show little variability across samples are
+excluded.  Since our computing resources are limited, we will apply a fairly aggressive filter to the data.
+We will reduce the data size by keeping only the 25% most variable genes for all subsequent analyses.
+In practice, one would be more careful about applying this filter.
+
+## Classifier Assessment
+
+Many factors can be incorporated into classifier performance assessment, including:
+
+* Predictive performance: Several metrics can be used to quantify predictive performance [@Vihinen:2012aa] and the choice is very much context dependent.
+* Classifier cost: Some classifiers may achieve higher predictive performance but at a cost of requiring a more complete set of predictors or features.  This cost may be an important factor in some applications.
+* Classifier interpretability: In some cases, the main purpose of building a classifier may be to get some insight into the biology at work.  Classifiers which implicitly or explicitly perform some sort of feature selection may provide an advantage in terms of interpretability over classifiers which rely on all features in manner that makes it difficult to determine feature importance.
+
+For illustration purposes, we will report several measures of predictive performance.
+We will also comment on each classifier's cost and interpretability.
+
+## Subclass Discovery 
+
+In some cases, one may be interested in analyzing gene expression data to uncover subgroups among the
+sampled population.  This is one application of what it known as *cluster analysis*.
+To evaluate the performance of cluster analysis methods for the purpose of
+subclass discovery, we will treat the msi status as unknown and examine each method's ability to
+recover this grouping in an unsupervised manner. 
+
+We note in passing that in practice this application
+requires particularly careful normalization and batch effect correction.   On the one hand, 
+not removing systematic effects may lead samples to cluster in a way that will make uncovering
+biologocal clusters very challenging.  On the other hand, the batch effect correction method may
+erroneously remove biological effects in the data.  
+
+# CRC Datasets
+
+A search on the GEO web site identified the following datasets as potentialy useful for this exercise.  All datasets have Affymetrix gene expression data for a number of samples annotated with msi status:
+
+- GSE4554 [@Watanabe:2006aa]: [HG-U133_Plus_2] (84 CRC = 33 MSI + 51 MSS)
+- GSE13067 [@Jorissen:2008aa]: [HG-U133_Plus_2] (74 CRC)
+- GSE13294 [@Jorissen:2008aa]:  [HG-U133_Plus_2] (89 MSI + 140 MSS + 58 MSI + 77 MSS)
+- GSE24514 [@Alhopuro:2012aa]: [HGU133A] (34 MSI,15 N)
+- GSE30540 [@Watanabe:2012aa]: [HG-U133_Plus_2] (35 stage II and stage III)
+- GSE35896 [@Schlicker:2012aa]: [HG-U133_Plus_2] (62 CRC samples)
+- GSE75316 [@Barras:2017aa]: [HG-U133_Plus_2] (59 CRC samples)
+- GSE39084 [@Kirzin:2014aa]:  [HG-U133_Plus_2] (70 CRC samples)
+- GSE26682 [@Schmit:2015aa]: [HG-U133A], [HG-U133_Plus_2] (???)
+- GSE14526 [@Yagi:2010aa]: [HG-U133_Plus_2]
+- GSE4045 [@Laiho:2006aa]: [HG-U133A] 
+
+## Download Datasets 
+
+This process is somewhat manual as the GEO data do not follow an entirely standard
+format.  Each dataset will have to be downloaded one at a time and examined.
+Following this step, we can loop again through the datasets and store the necessary
+data in a uniform manner.
+
+```{r getGEOHelp, echo=FALSE, cache=TRUE, cache.vars='GEOquery.getGEO.path'}
+ # CHANGE TO CLEAR CACHE
+ GEOquery.getGEO.path <- file.path(help_DIR, 'GEOquery.getGEO.html')
+ static_help("GEOquery", "getGEO", out=GEOquery.getGEO.path)
+```
+<!-- ######################################################################## -->
+
+We can download data from GEO using function 
+[getGEO](`r GEOquery.getGEO.path`) from package `GEOquery`.
+
+
+```{r dnldGSE, eval=FALSE, cache=FALSE, cache.vars=''}
+ suppressMessages(require(GEOquery))
+
+ GSE_SET.vec <- c('GSE4554', 'GSE13067', 'GSE13294', 
+                  'GSE24514', 'GSE30540', 'GSE35896',
+                  'GSE75316', 'GSE39084', 'GSE26682',
+                  'GSE14526', 'GSE4045')
+
+ for(SET in GSE_SET.vec){
+  DnLd.tm <- startTimedMessage("Start of Download for ", SET)
+   Set.gse <- getGEO(SET, destdir=temp_DIR ,getGPL=F) 
+   saveObj(paste0(SET,'.gse'), 'Set.gse')
+  stopTimedMessage(DnLd.tm)
+
+ }
+
+```
+<!-- ######################################################################## -->
+
+## Peek into Datasets
+
+```{r  peekGSE, eval=TRUE, cache=TRUE, cache.vars='', fig.width=11, fig.height=6}
+ # CHANGE THIS LINE TO CLEAR CACHE ..
+ suppressMessages(require(Biobase))
+ gseFile.vec <- list.files(file.path(WRKDIR,'Data'), 'gse$')
+
+ for(gseF in gseFile.vec){
+  cat("\nPeek at ", gseF)
+
+  loadObj(gseF, 'Set.gse')
+
+  print(dim(exprs(Set.gse[[1]])))
+  if(nrow(exprs(Set.gse[[1]])) == 0) next()  
+ #################################
+ # Expression Summary 
+if(F) {
+  cat("\nExpression Summary:\n")
+  print(kable(t(apply(exprs(Set.gse[[1]]),2,summary))))
+}
+ #################################
+ # Expression Boxplots
+ old_par <- par(mar=par('mar')+c(2,0,0,0))
+
+ boxplot(exprs(Set.gse[[1]]), outline=F, las=2) 
+ title(paste("Boxplots of expression values for", gseF))
+
+ par(old_par)
+
+ 
+ #################################
+ cat("\nSample Descriptions:\n")
+ print(kable(phenoData(Set.gse[[1]])@data))
+
+ }
+
+```
+<!-- ######################################################################## -->
+  
+
+## Dataset Cleaning
+
+Following a peek into the datasets, we will proceed forward keeping only the
+datasets which used the HG-U133_Plus_2 gene chip (N=54675 probe sets) and have
+msi status:
+`r KEEP_GSE.vec <- c('GSE13067', 'GSE13294','GSE35896','GSE39084', 'GSE4554');  KEEP_GSE.vec`
+
+We exclude GSE75316 from the analysis as most of the samples are already part of GSE13067 and the latter
+is a larger set.  
+
+In the next chunk, we go through each of these datasets and store the gene expression and 
+sample description data in a uniform manner to facilitate subsequent pooling.  We also
+take a look at potential intra dataset batch effects. 
+
+```{r cleanGSE, echo=T, cache=TRUE, cache.vars='',eval=TRUE, fig.width=8, fig.height=6}
+ # CHANGE THIS LINE TO CLEAR CACHE ..
+ suppressMessages(require(hgu133plus2.db))
+
+ for(SET in KEEP_GSE.vec){
+  cat("\n\nProcessing ", SET, '\n')
+
+  loadObj(paste0(SET, '.gse'), 'Set.gse')
+
+  ###################################################################
+  #  Expr - matrix
+  #  - rows are features
+  #  - columns are samples
+  ###################################################################
+  Expr.mtx <- exprs(Set.gse[[1]])
+
+  if(SET %in% c('GSE4554', 'GSE4045'))  Expr.mtx <- log2(pmax(Expr.mtx, min(Expr.mtx[Expr.mtx>0])))
+
+  ###################################################################
+  #  SampAttr - data.frame
+  #  - rows are samples
+  #  - columns are atttibutes of the samples
+  ###################################################################
+  phenoData.frm <- phenoData(Set.gse[[1]])@data
+
+  if(nrow(phenoData.frm) != ncol(Expr.mtx)) stop("Expression-sampAttr Mismatch for ", SET)
+
+  MS_Status <- switch(SET,
+      GSE13067 = gsub(' ','', 
+                 sapply(strsplit(phenoData.frm$title, split=':'), function(x) x[2])), 
+      GSE13294 = gsub(' ','', 
+                 sapply(strsplit(phenoData.frm$title, split=':'), function(x) x[2])), 
+      GSE35896 = gsub(' ','', 
+                 sapply(strsplit(phenoData.frm$characteristics_ch1.7, split=':'), function(x) x[2])), 
+      GSE39084 = gsub(' ','', 
+                 sapply(strsplit(phenoData.frm$characteristics_ch1.16, split=':'), function(x) x[2])), 
+      GSE4554 =  gsub(' ', '',
+                 sapply(strsplit(as.character(phenoData.frm$description), split=','), function(x) x[1])),
+        "ERROR")
+
+  print(table(MS_Status))
+
+  KEEP.ndx <- which(is.element(MS_Status, c('MSS', 'MSI', 'No', 'Low', 'High')))
+
+  sampAttr.frm <- data.frame(Sample_Id=rownames(phenoData.frm),
+                             MS_Status=MS_Status, 
+                             row.names=rownames(phenoData.frm))[KEEP.ndx,]
+  Expr.mtx <- Expr.mtx[,rownames(sampAttr.frm)]
+ 
+  ###################################################################
+  #  featureAttr - data.frame
+  #  - rows of featureAttr match rows of Expr mtx
+  #  - columns of featureAttr are atttibutes of the features - eg geneSymbol
+  ###################################################################
+  # This deosn;t work!
+  #featureAttr.frm <- featureData(Set.gse[[1]])@data
+  #dim(featureAttr.frm)
+  #Symbol.vec <- mget(featureAttr.frm$ID, hgu133plus2SYMBOL)
+  #featureAttr.frm$Symbol <- Symbol.vec[rownames(featureAttr.frm)]
+ 
+  Symbol.vec <- mget(rownames(Expr.mtx), hgu133plus2SYMBOL)
+  featureAttr.frm <- data.frame(Symbol=unlist(Symbol.vec))
+  rownames(featureAttr.frm) <- rownames(Expr.mtx)
+ 
+  ###################################################
+  # Save in arrayGeneExpr object
+  ###################################################
+  if(sum(colnames(Expr.mtx) != rownames(sampAttr.frm))) stop("Column order error")
+  if(sum(rownames(Expr.mtx) != rownames(featureAttr.frm))) stop("Row order error")
+ 
+  Set.arrayGeneExpr <-  list(exprData=NA, exprType=NA, Norm=NA,
+                                   sampAttr=NA, featureAttr=NA)
+  class(Set.arrayGeneExpr) <- "arrayGeneExpr"
+  Set.arrayGeneExpr$exprData <- Expr.mtx
+  Set.arrayGeneExpr$sampAttr <- sampAttr.frm
+  Set.arrayGeneExpr$featureAttr <- featureAttr.frm
+ 
+  saveObj(paste0(SET,'.arrayGeneExpr'), 'Set.arrayGeneExpr')
+ 
+  ######################################################
+  # Look for intra-set batch effects
+  ######################################################
+  Expt.prcomp <- prcomp(Expr.mtx)
+  
+  plot(x=Expt.prcomp$rotation[,'PC1'],
+       xlab=paste0('PC1 (', round(100*summary(Expt.prcomp)$importance[2,"PC1"],1),'%)'),
+       y=Expt.prcomp$rotation[,'PC2'],
+       ylab=paste0('PC2 (', round(100*summary(Expt.prcomp)$importance[2,"PC2"],1),'%)'),
+       pch=19, cex=1.5, col=as.numeric(as.factor(sampAttr.frm$MS_Status)))
+
+ 
+ } 
+
+```
+<!-- ######################################################################## -->
+
+## Data Pooling
+
+
+When pooling data from different sources, we should make sure not to introduce batch effects
+into the mix.  In the first instance we will simply pool the data sets together,
+and apply quantile normalization.  This can be seen as a very weak form of batch effect
+correction and is a minimal requirement.
+
+
+```{r poolGSE,cache=TRUE,cache.vars='',fig.width=12, fig.height=6}
+
+ ###############################
+ # Get feature attributes from one of the arrayGeneExpr objects
+ ###############################
+ loadObj(paste0(KEEP_GSE.vec[1],'.arrayGeneExpr'), 'Set.arrayGeneExpr')
+
+ featureAttr.frm <- Set.arrayGeneExpr$featureAttr
+ featureAttr.frm$Symbol[is.na(featureAttr.frm$Symbol)] <-
+        rownames(featureAttr.frm)[is.na(featureAttr.frm$Symbol)]
+ featureAttr.frm[1:5,,drop=F]
+
+ geneId.vec <- rownames(featureAttr.frm)
+
+ ###############################
+
+ ###############################
+ # Pool the expression data
+ ###############################
+ PooledExpr.mtx <- do.call('cbind', lapply(KEEP_GSE.vec,
+  function(SET) {
+    loadObj(paste0(SET,'.arrayGeneExpr'), 'Set.arrayGeneExpr')
+    Set.arrayGeneExpr$exprData[geneId.vec,]
+ }))
+
+ #dim(PooledExpr.mtx)
+ #PooledExpr.mtx[1:5, 1:5]
+
+ # Apply quantile normalization
+ median.Expr.vec <- apply(apply(PooledExpr.mtx,2,sort), 1, median)
+ #summary(median.Expr.vec)
+
+ PooledNormedExpr.mtx <- apply(PooledExpr.mtx, 2, function(x)
+     median.Expr.vec[rank(x)])
+ rownames(PooledNormedExpr.mtx) <- rownames(PooledExpr.mtx)
+
+
+ #summary(apply(PooledExpr.mtx, 2, mean))
+ #summary(apply(PooledNormedExpr.mtx, 2, mean))
+
+ ###############################
+ # Pool the sample attribute data
+ ###############################
+ PooledSampAttr.frm <- do.call('rbind', lapply(KEEP_GSE.vec,
+  function(SET) {
+   #cat(SET,'\n')
+    loadObj(paste0(SET,'.arrayGeneExpr'), 'Set.arrayGeneExpr')
+    data.frame(GSE=rep(SET,nrow(Set.arrayGeneExpr$sampAttr)),
+               Sample_Id=Set.arrayGeneExpr$sampAttr$Sample_Id,
+               MS_Status=Set.arrayGeneExpr$sampAttr$MS_Status,
+               row.names=rownames(Set.arrayGeneExpr$sampAttr))
+  }))
+
+ #dim(PooledSampAttr.frm)
+ #PooledSampAttr.frm[1:5, ]
+
+ # Assemble arrayGeneExpr object for pooled data and save
+ GSEPool.arrayGeneExpr <-  list(exprData=NA, exprType=NA, Norm=NA,
+                                  sampAttr=NA, featureAttr=NA)
+ class(GSEPool.arrayGeneExpr) <- "arrayGeneExpr"
+ GSEPool.arrayGeneExpr$exprData <- PooledNormedExpr.mtx
+ GSEPool.arrayGeneExpr$exprType <- 'MAS5_RMA'
+ GSEPool.arrayGeneExpr$Norm <- 'Quantile'
+ GSEPool.arrayGeneExpr$sampAttr <- PooledSampAttr.frm
+ GSEPool.arrayGeneExpr$featureAttr <- featureAttr.frm
+
+ save(GSEPool.arrayGeneExpr, file=file.path(WRKDIR, 'Data','GSEPool.arrayGeneExpr'))
+
+ ######################################################
+ # Look for inter-set batch effects
+ ######################################################
+ Expt.prcomp <- prcomp(PooledNormedExpr.mtx)
+  
+ par(mfrow=c(1,2), mar=c(3,3,2,1))
+ # Annotate with Batch
+ plot(x=Expt.prcomp$rotation[,'PC1'],
+      xlab=paste0('PC1 (', round(100*summary(Expt.prcomp)$importance[2,"PC1"],1),'%)'),
+      y=Expt.prcomp$rotation[,'PC2'],
+      ylab=paste0('PC2 (', round(100*summary(Expt.prcomp)$importance[2,"PC2"],1),'%)'),
+      pch=19, cex=1.5, col=as.numeric(as.factor(PooledSampAttr.frm$GSE)))
+ title('Color is Batch')
+
+ legend.tbl <- table(as.factor(PooledSampAttr.frm$GSE), 
+                     as.numeric(as.factor(PooledSampAttr.frm$GSE)))
+ legend('topright', pch=19, cex=1.5, 
+         legend=rownames(legend.tbl),
+         col=as.numeric(colnames(legend.tbl)))
+
+ # Annotate with MS_Status
+ MSS_MSI <- as.factor(ifelse(is.element(PooledSampAttr.frm$MS_Status, c('MSS', 'No')),
+          'MSS','MSI'))
+ plot(x=Expt.prcomp$rotation[,'PC1'],
+      xlab=paste0('PC1 (', round(100*summary(Expt.prcomp)$importance[2,"PC1"],1),'%)'),
+      y=Expt.prcomp$rotation[,'PC2'],
+      ylab=paste0('PC2 (', round(100*summary(Expt.prcomp)$importance[2,"PC2"],1),'%)'),
+      pch=19, cex=1.5, col=as.numeric(as.factor(MSS_MSI)))
+ title('Color is MSS_MSI')
+
+ legend.tbl <- table(as.factor(MSS_MSI), 
+                     as.numeric(as.factor(MSS_MSI)))
+ legend('topright', pch=19, cex=1.5, 
+         legend=rownames(legend.tbl),
+         col=as.numeric(colnames(legend.tbl)))
+
+```
+<!-- ######################################################################## -->
+
+
+## Batch Correction
+
+We see a definite batch effect in the PCA plot based on the pooled expression data.
+The clustering is along probe set reduction method, RMA vs MAS 5.0.
+One should reslly go back to the cel files and re-anlyze all samples using one
+probe set reduction method.  For the sake of illustration, we will instead try to
+remove this effect using a batch-effect correction method.
+
+Given that we don't have a good set of control genes as required by the RUV method, we'll
+use 'ComBat` from  the 
+[SVA](https://www.bioconductor.org/packages/release/bioc/html/sva.html)
+package.
+
+Alternatively, we could keep keep the two sets of data, those siummarized using RMA
+and those summarized using MAS 5.0, separate, alternating using one set for
+model selection and fitting and the other for testing.  This would provide
+a string test of the generalizability and robustness of the results.
+
+```{r svaBatchAdjust, cache=TRUE, cache.vars='',fig.width=12, fig.height=6}
+ suppressMessages(require(sva))
+
+ load(file=file.path(WRKDIR, 'Data','GSEPool.arrayGeneExpr'))
+
+ Expr.mtx <- GSEPool.arrayGeneExpr$exprData
+ sampAttr.frm <- GSEPool.arrayGeneExpr$sampAttr
+
+
+ # Applying theComBatfunction to adjust for known batches
+ # Note: we could here use a binray batch: RMA vs MAS5.
+ batch <- as.factor(sampAttr.frm$GSE)
+
+ with(sampAttr.frm, table(GSE, MS_Status))
+
+ MSS <- as.factor(is.element(sampAttr.frm$MS_Status, c('MSS', 'No')))
+ modcombat = model.matrix(~ MSS)
+
+ combat_edata = ComBat(dat=Expr.mtx, 
+                       batch=batch, 
+                       mod=modcombat, 
+                       par.prior=TRUE, 
+                       prior.plots=FALSE)
+
+ GSEPool.arrayGeneExpr$exprDataBatchAdj <- combat_edata
+
+ save(GSEPool.arrayGeneExpr, file=file.path(WRKDIR, 'Data','GSEPool.arrayGeneExpr'))
+
+ ######################################################
+ # Look for inter-set batch effects
+ ######################################################
+ Expt.prcomp <- prcomp(GSEPool.arrayGeneExpr$exprDataBatchAdj)
+  
+ par(mfrow=c(1,2), mar=c(3,3,2,1))
+ # Annotate with Batch
+ plot(x=Expt.prcomp$rotation[,'PC1'],
+      xlab=paste0('PC1 (', round(100*summary(Expt.prcomp)$importance[2,"PC1"],1),'%)'),
+      y=Expt.prcomp$rotation[,'PC2'],
+      ylab=paste0('PC2 (', round(100*summary(Expt.prcomp)$importance[2,"PC2"],1),'%)'),
+      pch=19, cex=1.5, col=as.numeric(as.factor(sampAttr.frm$GSE)))
+ title('Color is Batch')
+
+ legend.tbl <- table(as.factor(sampAttr.frm$GSE), 
+                     as.numeric(as.factor(sampAttr.frm$GSE)))
+ legend('topright', pch=19, cex=1.5, 
+         legend=rownames(legend.tbl),
+         col=as.numeric(colnames(legend.tbl)))
+
+ # Annotate with MS_Status
+ MSS_MSI <- as.factor(ifelse(is.element(sampAttr.frm$MS_Status, c('MSS', 'No')),
+          'MSS','MSI'))
+ plot(x=Expt.prcomp$rotation[,'PC1'],
+      xlab=paste0('PC1 (', round(100*summary(Expt.prcomp)$importance[2,"PC1"],1),'%)'),
+      y=Expt.prcomp$rotation[,'PC2'],
+      ylab=paste0('PC2 (', round(100*summary(Expt.prcomp)$importance[2,"PC2"],1),'%)'),
+      pch=19, cex=1.5, col=as.numeric(as.factor(MSS_MSI)))
+ title('Color is MSS_MSI')
+
+ legend.tbl <- table(as.factor(MSS_MSI), 
+                     as.numeric(as.factor(MSS_MSI)))
+ legend('topright', pch=19, cex=1.5, 
+         legend=rownames(legend.tbl),
+         col=as.numeric(colnames(legend.tbl)))
+
+ 
+```
+<!-- ######################################################################## -->
+
+Visual inpection of the effect of the batch correction transformation
+is a minimal requirement for verification.  One can do a better job
+at quantifying the effect of batch correction, especially of the data set
+contains control features and control samples. See Lazar et.al. [@Lazar:2013aa]
+for a discussion of batch effect removal assessment.
+
+
+##  Separate Data Set into Train and Test Subsets
+
+We will separate the data set into **Train** and **Test** subsets here, before
+any other filtering or data manipulation.  In particular, since we will
+be interested in evaluating the effect of gene or probe set selection
+this selection must be made on the basis of the training subset only.
+This is done as a precautionary measure as gene selection based on
+variability is unlikely to have an effect on sample classification
+performance.
+
+Take note that the expression matrices that we save here will
+be transposed with `genes in columns`.  This is done to accumulate
+the data format expected by the `caret` package.
+
+```{r getTrainTest, cache=TRUE,cache.vars=''}
+ # CHANGE THIS LINE TO CLEAR CACHE
+ suppressMessages(require(caret))
+
+ # Load expression  data object
+ load(file.path(WRKDIR, 'Data','GSEPool.arrayGeneExpr'))
+
+ # Get expression data matrix 
+ Expr.mtx <- t(GSEPool.arrayGeneExpr$exprDataBatchAdj)
+
+ # Use gene names where possible
+ colnames(Expr.mtx) <- 
+ make.names(GSEPool.arrayGeneExpr$featureAttr[colnames(Expr.mtx),], unique=T)
+
+ # Keep map
+ GeneNameMap.vec <- rownames(GSEPool.arrayGeneExpr$exprDataBatchAdj)
+ names(GeneNameMap.vec) <- colnames(Expr.mtx)
+
+ #GeneNameMap.vec[1:5]
+
+ save(GeneNameMap.vec, file=file.path(WRKDIR, 'Data', 'GeneNameMap.vec'))
+
+ # Get sample attributes
+ sampAttr.frm <- GSEPool.arrayGeneExpr$sampAttr
+
+ DataSource.vec <- sampAttr.frm$GSE
+ names(DataSource.vec) <- rownames(sampAttr.frm)
+
+ Label.vec <- ifelse(is.element(sampAttr.frm$MS_Status, c('MSS', 'No')), 'MSS','MSI')
+ names(Label.vec) <- rownames(sampAttr.frm)
+ rm(GSEPool.arrayGeneExpr)
+
+ # split Into Train and Test
+ set.seed(12379)
+ inTrain <- createDataPartition(y=Label.vec, p=0.75, list=F)
+
+ Train.Expr.mtx <- Expr.mtx[inTrain,]
+ Train.Label.vec <- Label.vec[inTrain]
+ Train.DataSource.vec <- DataSource.vec[inTrain]
+
+
+ Test.Expr.mtx <- Expr.mtx[-inTrain,]
+ Test.Label.vec <- Label.vec[-inTrain]
+ Test.DataSource.vec <- Label.vec[-inTrain]
+
+ print(kable(rbind(Train=dim(Train.Expr.mtx),
+             Test=dim(Test.Expr.mtx))))
+
+ print(kable(rbind(
+ Trian=table(Train.Label.vec)/length(Train.Label.vec),
+ Test=table(Test.Label.vec)/length(Test.Label.vec))))
+
+ # Save these
+ save(Train.Expr.mtx, file=file.path(WRKDIR, 'Data', 'Train.Expr.mtx'))
+ save(Test.Expr.mtx, file=file.path(WRKDIR, 'Data', 'Test.Expr.mtx'))
+ save(Train.Label.vec, file=file.path(WRKDIR, 'Data', 'Train.Label.vec'))
+ save(Test.Label.vec, file=file.path(WRKDIR, 'Data', 'Test.Label.vec'))
+ save(Train.DataSource.vec, file=file.path(WRKDIR, 'Data', 'Train.DataSource.vec'))
+ save(Test.DataSource.vec, file=file.path(WRKDIR, 'Data', 'Test.DataSource.vec'))
+
+```
+<!-- ######################################################################## -->
+
+
+## Save Gene Sets
+
+Save gene sets selected by overall variability *in training samples*.
+In the interest of conserving computing resources, in the analysis 
+that follows we will use the smallest set of genes, the top 10%
+most variable genes.  
+
+Note that we select genes based on variability in the entire training
+dataset which includes data from different GEO data sets.  This selection
+may favor the incusion of genes which differ across the different
+data sets due to technical reasons.  An alternative selection would be to
+to select genes based on within data set variability.  This could be
+implemented by filtering based on the residual variance of an
+anova model `Expr ~ GSE` fitted to the gene expression data.
+
+```{r saveGeneSets,cache=TRUE,cache.vars=''}
+ # CHANGE THIS LINE TO CLEAR CACHE
+ load(file.path(WRKDIR, 'Data', 'Train.Expr.mtx'))
+
+ # Identify and remove low variance columns
+ Train.Expr.mad.vec <- apply(Train.Expr.mtx,2,mad)
+ #summary(Train.Expr.mad.vec)
+
+ # In the interest of computing time, we'll be very conservative here
+ # Come back and look improving this filter later
+ Top10.cols <- which(Train.Expr.mad.vec > quantile(Train.Expr.mad.vec, prob=0.90))
+ Train.Top10VarGenes.vec <- colnames(Train.Expr.mtx)[Top10.cols]
+ #length(Train.Top10VarGenes.vec)
+
+ save(Train.Top10VarGenes.vec, file=file.path(WRKDIR,'Data','Train.Top10VarGenes.vec'))
+
+ # also save top 25 and top 50
+ Top25.cols <- which(Train.Expr.mad.vec > quantile(Train.Expr.mad.vec, prob=0.75))
+ Train.Top25VarGenes.vec <- colnames(Train.Expr.mtx)[Top25.cols]
+ #length(Train.Top25VarGenes.vec)
+ save(Train.Top25VarGenes.vec, file=file.path(WRKDIR,'Data','Train.Top25VarGenes.vec'))
+
+ Top50.cols <- which(Train.Expr.mad.vec > quantile(Train.Expr.mad.vec, prob=0.50))
+ Train.Top50VarGenes.vec <- colnames(Train.Expr.mtx)[Top50.cols]
+ #length(Train.Top50VarGenes.vec)
+ save(Train.Top50VarGenes.vec, file=file.path(WRKDIR,'Data','Train.Top50VarGenes.vec'))
+
+```
+<!-- ######################################################################## -->
+
+# Train Predictive Models
+
+We are ready to use the Training data to evaluate various predictive models.
+
+Set up training parameters:
+```{r setTrainParam}
+ suppressMessages(require(caret))
+
+ SelGenes.CV <- paste(SelGenes, '.CV.', paste(unlist(CV), collapse='_'),sep='')
+
+ cvControl <- trainControl(method = "repeatedcv", number=CV$Num, repeats=CV$Rep,
+                           classProbs = TRUE, summaryFunction = twoClassSummary,
+                           savePredictions='final')
+
+ # Load Data
+ loadObj(paste0('Train.',SelGenes,'.vec'), 'SelGenes.vec')
+ 
+ load(file=file.path(WRKDIR, 'Data', 'Train.Expr.mtx'))
+ Train.SelGenes.Expr.mtx <- Train.Expr.mtx[, SelGenes.vec]
+ rm(Train.Expr.mtx)
+
+ load(file=file.path(WRKDIR, 'Data', 'Train.Label.vec'))
+
+ #dim(Train.SelGenes.Expr.mtx);length(Train.Label.vec)
+``` 
+<!-- ######################################################################## -->
+
+```{r doMC, echo=F}
+ # Set up parallel computing.
+ suppressMessages(require(doMC))
+ suppressMessages(require(parallel))
+ #cat("Cores =", detectCores(),'\n')
+ registerDoMC(cores=detectCores())
+```
+<!-- ######################################################################## -->
+
+
+
+We will use the `r SelGenes` gene set in this analysis.
+Model tuning and optimization will be done based on
+`r CV$Rep` repetitions of `r CV$Num`-fold cross-validations.
+This provides `r CV$Rep` cross-validated, or out-of-sample, predicted values 
+for each sample in the training set.  The distribution of predicted values
+can be examined to identify hard to predict samples.  Some of these
+samples may potentially be mis-labelled, or may be hard to fit for other
+reasons.  One might consider doing an analysis which exludes these samples
+from the training set to see what impact they have on the fits.
+
+Some of the models which can be evaluated with `caret` include:
+
+* stepLDA - Linear Discriminant Analysis with Stepwise Feature Selection
+* stepQDA - Qaudratic Discriminant Analysis with Stepwise Feature Selection
+* knn - k nearest neighbors
+* pam - Nearest shrunken centroids
+* rf - Random forests
+* svmRadial - Support vector machines (RBF kernel)
+* gbm - Boosted trees
+* xgbLinear - eXtreme Gradient Boosting
+* xgbTree - eXtreme Gradient Boosting
+* neuralnet - neural network
+
+Many more [models](https://topepo.github.io/caret/available-models.html)
+ can be implemented and evaluated with `caret`, including `deep learning` methods.  
+
+<!-- 
+Method requiring explicit dimensionality reduction:
+* dlda, lda, qda - Classical linear disrimanent alalysis preceded  by variable selection
+
+Methods which are not adapted to classification problems (penalized regression methods):
+* pls - Partial least squares
+* lasso - The lasso
+* enet - Elastic net
+
+These methods dont work.
+* rda - Regularized discriminant analysis
+* multinom - Logistic/Multinomial regression
+* nnet - neural network
+-->
+
+<!--
+## stepLDAFit - Stepwise linear discriminant analysis
+-->
+```{r stepLDAFit, cache=TRUE,cache.vars='', eval=FALSE, echo=FALSE}
+ # CHANGE THIS LINE TO CLEAR CACHE
+ ################################# 
+ set.seed(12379)
+ SelGenes.stepLDAFit.tm <- system.time(
+  SelGenes.stepLDAFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="stepLDA",
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.stepLDAFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.stepLDAFit'), 'SelGenes.stepLDAFit')
+
+``` 
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r stepLDAFitPrint,echo=F,eval=FALSE}
+ loadObj(paste0(SelGenes.CV, '.stepLDAFit'), 'SelGenes.stepLDAFit')
+ print(SelGenes.stepLDAFit)
+```
+<!-- ######################################################################## -->
+
+<!--
+## stepQDAFit - Stepwise quadratic discriminant analysis
+-->
+```{r stepQDAFit, cache=TRUE,cache.vars='', eval=FALSE,echo=FALSE}
+ # CHANGE THIS LINE TO CLEAR CACHE
+ ################################# 
+ set.seed(12379)
+ SelGenes.stepQDAFit.tm <- system.time(
+  SelGenes.stepQDAFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="stepQDA",
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.stepQDAFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.stepQDAFit'), 'SelGenes.stepQDAFit')
+
+``` 
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r stepQDAFitPrint,echo=F,eval=FALSE}
+ loadObj(paste0(SelGenes.CV, '.stepQDAFit'), 'SelGenes.stepQDAFit')
+ print(SelGenes.stepQDAFit)
+```
+<!-- ######################################################################## -->
+
+## knn - k nearest neighbors
+```{r knnFit, cache=TRUE,cache.vars='', eval=TRUE}
+ # CHANGE THIS LINE TO CLEAR CACHE
+ ################################# 
+ set.seed(12379)
+ SelGenes.knnFit.tm <- system.time(
+  SelGenes.knnFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="knn", tuneLength=10,
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.knnFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.knnFit'), 'SelGenes.knnFit')
+
+```
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r knnFitPrint,echo=F,eval=TRUE}
+ loadObj(paste0(SelGenes.CV, '.knnFit'), 'SelGenes.knnFit')
+ print(SelGenes.knnFit)
+```
+<!-- ######################################################################## -->
+
+
+```{r pamFit, cache=TRUE,cache.vars='',eval=TRUE}
+ set.seed(12379)
+ SelGenes.pamFit.tm <- system.time(
+ SelGenes.pamFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="pam",
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.pamFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.pamFit'), 'SelGenes.pamFit')
+
+```
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r pamFitPrint,echo=F,eval=TRUE}
+ loadObj(paste0(SelGenes.CV, '.pamFit'), 'SelGenes.pamFit')
+ print(SelGenes.pamFit)
+```
+<!-- ######################################################################## -->
+
+## rf - Random forests
+```{r rfFit, cache=TRUE,cache.vars='',eval=TRUE}
+ set.seed(12379)
+ SelGenes.rfFit.tm <- system.time(
+ SelGenes.rfFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="rf",
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.rfFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.rfFit'), 'SelGenes.rfFit')
+
+```
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r rfFitPrint,echo=F,eval=TRUE}
+ loadObj(paste0(SelGenes.CV, '.rfFit'), 'SelGenes.rfFit')
+ print(SelGenes.rfFit)
+```
+<!-- ######################################################################## -->
+
+
+## svmRadial - Support vector machines (RBF kernel)
+```{r svmRadialFit, cache=TRUE,cache.vars='',eval=TRUE}
+ set.seed(12379)
+ SelGenes.svmRadialFit.tm <- system.time(
+ SelGenes.svmRadialFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="svmRadial",
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.svmRadialFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.svmRadialFit'), 'SelGenes.svmRadialFit')
+
+```
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r svmRadialFitPrint,echo=F,eval=TRUE}
+ loadObj(paste0(SelGenes.CV, '.svmRadialFit'), 'SelGenes.svmRadialFit')
+ print(SelGenes.svmRadialFit)
+```
+<!-- ######################################################################## -->
+
+## gbm - Boosted trees
+```{r gbmFit, cache=TRUE,cache.vars='',eval=TRUE}
+ set.seed(12379)
+ SelGenes.gbmFit.tm <- system.time(
+ SelGenes.gbmFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="gbm", verbose=F,
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.gbmFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.gbmFit'), 'SelGenes.gbmFit')
+
+```
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r gbmFitPrint,echo=F,eval=TRUE}
+ loadObj(paste0(SelGenes.CV, '.gbmFit'), 'SelGenes.gbmFit')
+ print(SelGenes.gbmFit)
+```
+<!-- ######################################################################## -->
+
+
+## xgbLinear - eXtreme Gradient Boosting
+```{r xgbLinearFit, cache=TRUE,cache.vars='',eval=TRUE}
+ set.seed(12379)
+ SelGenes.xgbLinearFit.tm <- system.time(
+ SelGenes.xgbLinearFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="xgbLinear", verbose=F,
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.xgbLinearFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.xgbLinearFit'), 'SelGenes.xgbLinearFit')
+
+```
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r xgbLinearFitPrint,echo=F,eval=TRUE}
+ loadObj(paste0(SelGenes.CV, '.xgbLinearFit'), 'SelGenes.xgbLinearFit')
+ print(SelGenes.xgbLinearFit)
+```
+<!-- ######################################################################## -->
+
+<!-- TAKES TOOOO LOOOOONG 
+## xgbTree - eXtreme Gradient Boosting
+-->
+```{r xgbTreeFit, cache=TRUE,cache.vars='',echo=FALSE, eval=FALSE}
+ set.seed(12379)
+ SelGenes.xgbTreeFit.tm <- system.time(
+ SelGenes.xgbTreeFit <- train(Train.SelGenes.Expr.mtx, Train.Label.vec,
+               method="xgbTree", verbose=F,
+               trControl=cvControl, preProc=c('center','scale'))
+ )
+ print(SelGenes.xgbTreeFit.tm)
+
+ saveObj(paste0(SelGenes.CV, '.xgbTreeFit'), 'SelGenes.xgbTreeFit')
+
+```
+<!-- SHOULD HAVE PRINTED IN THE SAME CHUNK! -->
+```{r xgbTreeFitPrint,echo=F,eval=FALSE}
+ loadObj(paste0(SelGenes.CV, '.xgbTreeFit'), 'SelGenes.xgbTreeFit')
+ print(SelGenes.xgbTreeFit)
+```
+<!-- ######################################################################## -->
+
+# Compare Predictive Models
+
+Here we compare predictive models in terms of:
+
+- Processing time
+- Prediction accuracy and ROC on train samples
+- Prediction accuracy and ROC on train `out-of-sample`
+- Prediction accuracy and ROC on test samples
+- Direct comparison of variable importance
+
+## Load Models
+
+```{r getModels}
+
+ # Load Train and Test Data
+ load(file=file.path(WRKDIR, 'Data', 'Train.Expr.mtx'))
+ load(file=file.path(WRKDIR, 'Data', 'Test.Expr.mtx'))
+ load(file=file.path(WRKDIR, 'Data', 'Train.Label.vec'))
+ load(file=file.path(WRKDIR, 'Data', 'Test.Label.vec'))
+
+ CLASS1 <- as.character(sort(unique(Train.Label.vec))[1])
+ CLASS2 <- as.character(sort(unique(Train.Label.vec))[2])
+
+ # Load models
+ ModelFit.vec <- list.files(file.path(WRKDIR, 'Data'), 'Fit$')
+
+ # Stratify according to batch effect correction
+ FitSetCV.vec <- sapply(strsplit(ModelFit.vec, split='\\.'),
+            function(x) paste(x[1:3], collapse='.'))
+
+ ModelFit.lst <- split(sapply(strsplit(ModelFit.vec, split='\\.'), function(x) rev(x)[1]),
+                       FitSetCV.vec)
+
+ # Get Model.col for plotting (only have one FitSetCV values here.  could have many)
+ Model.col <- as.numeric(as.factor(ModelFit.lst[[1]]))
+ names(Model.col) <- ModelFit.lst[[1]]
+
+ cat("Found", length(ModelFit.vec), 'models:\n')
+ print(ModelFit.lst)
+
+ # Load Models for single set (we cd have more than one set in FitSetCV.vec)
+ SET <- names(ModelFit.lst)[1]
+ Set.ModelFit.lst <- lapply(ModelFit.lst[[SET]],
+  function(MF) {
+   loadObj(paste(SET, MF, sep='.'), 'ModelFit')
+   ModelFit})
+ names(Set.ModelFit.lst) <- ModelFit.lst[[SET]]
+
+```
+<!-- ######################################################################## -->
+
+## Compare Times
+```{r compTimes, cache=TRUE, cache.vars=''}
+
+  Set.ModelTimes.frm <- do.call('rbind', lapply(Set.ModelFit.lst,
+  function(LL) c(all=LL$times$everything)))###, final=LL$times$final)))
+
+  print(kable(t(Set.ModelTimes.frm), digits=2))
+
+```
+<!-- ######################################################################## -->
+
+
+## Compare Prediction Accuracy
+
+
+### Train Data Accuracy
+```{r trainAccuracy, cache=TRUE, cache.vars=''}
+ suppressMessages(require(caret))
+
+ # Train - these are fitting errors
+ Set.Train.Pred.lst <- suppressMessages(predict(Set.ModelFit.lst))
+          #, newdata=Train.SelGenes.Expr.mtx))
+
+ Set.Train.TruthTable.frm <- do.call('rbind', lapply(Set.Train.Pred.lst,
+ function(PRED) {
+   truth.vec <- as.vector(table(PRED, Train.Label.vec))#/length(Train.Label.vec)
+   # ASSUMING MSI is FIRST LABEL of CLASS
+   names(truth.vec) <- c('TN', 'FP', 'FN', 'TP')
+   truth.vec}))
+
+ print(
+  kable(data.frame(cbind(Set.Train.TruthTable.frm,
+                  Set.Train.TruthTable.frm/length(Train.Label.vec))),
+    digits=2, align='c')
+  )
+
+```
+<!-- ######################################################################## -->
+
+
+### Out of Sample Train Data Accuracy
+```{r OOSTrainAccuracy, cache=TRUE, cache.vars=''}
+
+  Set.ModelFit.osPred.mtx.lst <- lapply(Set.ModelFit.lst,
+ function(MF) {
+   MF.pred.mtx <- MF$pred
+   Rep.vec <- sapply(strsplit(MF$pred$Resample, split='\\.'),'[', 2)
+   rowIndex.vec <- sort(unique(MF$pred$rowIndex))
+   Pred.mtx <- do.call('cbind', lapply(split(MF$pred, Rep.vec),
+   function(RepMFpred.frm)
+      as.character(RepMFpred.frm[match(rowIndex.vec, RepMFpred.frm$rowIndex),'pred'])))
+   Pred.mtx})
+
+ # Use mode over reps as prediction
+ ############################################
+ Set.ModelFit.osPred.vec.lst <- lapply(Set.ModelFit.osPred.mtx.lst,
+ function(PRED.mtx) apply(PRED.mtx,1,function(Pred.vec)
+ names(table(Pred.vec))[which.max(table(Pred.vec))]))
+
+ Set.Train.osPredMode.TruthTable.frm <- do.call('rbind', lapply(Set.ModelFit.osPred.vec.lst,
+ function(PRED) {
+   truth.vec <- as.vector(table(PRED, Train.Label.vec))#/length(Train.Label.vec)
+   # ASSUMING MSI is FIRST LABEL of CLASS
+   names(truth.vec) <- c('TN', 'FP', 'FN', 'TP')
+   truth.vec}))
+
+ print(
+ kable(data.frame(cbind(Set.Train.osPredMode.TruthTable.frm,
+                  Set.Train.osPredMode.TruthTable.frm/length(Train.Label.vec))),
+    digits=2, align='c')
+ )
+
+ ############################################
+ # alternatively, can look at the osPred by rep
+ # and use mean for error rates
+ ############################################
+ Set.Train.osPredMean.TruthTable.frm <- do.call('rbind', lapply(Set.ModelFit.osPred.mtx.lst,
+  function(PRED.mtx) {
+   TruthTable.mtx <- do.call('rbind', lapply(1:ncol(PRED.mtx),
+   function(CC) as.vector(table(PRED.mtx[,CC], Train.Label.vec)/length(Train.Label.vec))))
+   apply(TruthTable.mtx,2,mean)}))
+  colnames(Set.Train.osPredMean.TruthTable.frm) <- c('TN', 'FP', 'FN', 'TP')
+
+  print(
+    kable(data.frame(Set.Train.osPredMean.TruthTable.frm),
+       digits=2, align='c')
+  )
+
+```
+<!-- ######################################################################## -->
+
+### Test Data Accuracy
+```{r testAccuracy, cache=TRUE, cache.vars=''}
+ suppressMessages(require(caret))
+
+ # Test - these are fitting errors
+ Set.Test.Pred.lst <- lapply(Set.ModelFit.lst,
+          function(MF) predict(MF, newdata=Test.Expr.mtx))
+
+ Set.Test.TruthTable.frm <- do.call('rbind', lapply(Set.Test.Pred.lst,
+ function(PRED) {
+   truth.vec <- as.vector(table(PRED, Test.Label.vec))#/length(Test.Label.vec)
+   # ASSUMING MSI is FIRST LABEL of CLASS
+   names(truth.vec) <- c('TN', 'FP', 'FN', 'TP')
+   truth.vec}))
+
+ print(kable(data.frame(cbind(Set.Test.TruthTable.frm,
+                  Set.Test.TruthTable.frm/length(Test.Label.vec))),
+    digits=2, align='c'))
+
+```
+<!-- ######################################################################## -->
+
+
+## Compare Models in Terms of ROC
+
+### Training Data ROC
+```{r CompROCTrain, cache=TRUE, cache.vars='Set.Train.roc.mtx.lst', fig.height=6, fig.width=11}
+ # CHANGE THIS LINE TO CLEAR CACHE
+ suppressMessages(require(pROC))
+
+ ################################
+ # Train
+ ################################
+ # Get predicted probabilities
+ Set.Train.Prob.lst <- suppressMessages(predict(Set.ModelFit.lst, type='prob'))
+ Set.Train.ProbClass1.mtx <- do.call('cbind',
+    lapply(Set.Train.Prob.lst, function(x) x[,CLASS1]))
+
+ rownames(Set.Train.ProbClass1.mtx) <- names(Train.Label.vec)
+
+ # ROC
+ Set.Train.roc.mtx.lst <- lapply(colnames(Set.Train.ProbClass1.mtx), function(MM)
+    do.call('rbind', lapply(rev(sort(unique(Set.Train.ProbClass1.mtx))),
+     function(TS) {
+        TP <- sum(Set.Train.ProbClass1.mtx[,MM][Train.Label.vec==CLASS1] > TS, na.rm=T)
+        FP <- sum(Set.Train.ProbClass1.mtx[,MM][Train.Label.vec==CLASS2] > TS, na.rm=T)
+        c(TS=TS, TP=TP, FP=FP)}))
+   )
+ names(Set.Train.roc.mtx.lst) <- colnames(Set.Train.ProbClass1.mtx)
+ # Get auc
+ Set.Train.auc.vec <- sapply(1:ncol(Set.Train.ProbClass1.mtx), function(CC)
+   auc(Train.Label.vec, Set.Train.ProbClass1.mtx[,CC]))
+ names(Set.Train.auc.vec) <- colnames(Set.Train.ProbClass1.mtx)
+
+
+ plot(x=range(do.call('c', lapply(Set.Train.roc.mtx.lst,
+                function(LL) LL[,'FP'])))/sum(Train.Label.vec==CLASS2),
+      y=range(do.call('c', lapply(Set.Train.roc.mtx.lst,
+                function(LL) LL[,'TP'])))/sum(Train.Label.vec==CLASS1),
+      xlab='FP', ylab='TP', type='n')
+
+ for(II in 1:length(Set.Train.roc.mtx.lst))
+ lines(x=Set.Train.roc.mtx.lst[[II]][,'FP']/sum(Train.Label.vec==CLASS2),
+       y=Set.Train.roc.mtx.lst[[II]][,'TP']/sum(Train.Label.vec==CLASS1),
+       col=Model.col[names(Set.Train.roc.mtx.lst)[II]])
+ abline(0,1, col='grey')
+ legend('bottomright',
+        legend=paste(names(Set.Train.roc.mtx.lst), ':',
+          round(Set.Train.auc.vec[names(Set.Train.roc.mtx.lst)],3),sep=''),
+        col=Model.col[names(Set.Train.roc.mtx.lst)],
+        lty=1)
+ title('Model Performance on Train Set')
+
+```
+<!-- ######################################################################## -->
+
+### Out-of-sample Train: Average over Repeats
+
+```{r CompROCOOSTrain, cache=FALSE, cache.vars='', fig.height=6, fig.width=11}
+ suppressMessages(require(pROC))
+ # Get predicted probabilities
+ Set.ModelFit.osProbClass1.mtx.lst <- lapply(Set.ModelFit.lst,
+ function(MF) {
+   MF.pred.mtx <- MF$pred
+   Rep.vec <- sapply(strsplit(MF$pred$Resample, split='\\.'),'[', 2)
+   rowIndex.vec <- sort(unique(MF$pred$rowIndex))
+   ProbClass1.mtx <- do.call('cbind', lapply(split(MF$pred, Rep.vec),
+   function(RepMFpred.frm)
+      RepMFpred.frm[match(rowIndex.vec, RepMFpred.frm$rowIndex),CLASS1]))
+   ProbClass1.mtx})
+
+ 
+ #################################
+ # Use average osProb
+ #################################
+ Set.Train.mean_osProbClass1.mtx <- do.call('cbind', lapply(Set.ModelFit.osProbClass1.mtx.lst,
+  function(osProbClass1.mtx) apply(osProbClass1.mtx,1,mean)))
+ rownames(Set.Train.mean_osProbClass1.mtx) <- names(Train.Label.vec)
+
+ # ROC
+  Set.Train.mean_osProbClass1.roc.mtx.lst <-
+  lapply(colnames(Set.Train.mean_osProbClass1.mtx), function(MM)
+   do.call('rbind', lapply(rev(sort(unique(Set.Train.mean_osProbClass1.mtx))),
+    function(TS) {
+     TP <- sum(Set.Train.mean_osProbClass1.mtx[,MM][Train.Label.vec==CLASS1] > TS, na.rm=T)
+     FP <- sum(Set.Train.mean_osProbClass1.mtx[,MM][Train.Label.vec==CLASS2] > TS, na.rm=T)
+        c(TS=TS, TP=TP, FP=FP)}))
+   )
+ names(Set.Train.mean_osProbClass1.roc.mtx.lst) <- colnames(Set.Train.mean_osProbClass1.mtx)
+
+ # Get auc
+ Set.Train.mean_osProbClass1.auc.vec <- sapply(1:ncol(Set.Train.mean_osProbClass1.mtx), function(CC)
+   auc(Train.Label.vec, Set.Train.mean_osProbClass1.mtx[,CC]))
+ names(Set.Train.mean_osProbClass1.auc.vec) <- colnames(Set.Train.mean_osProbClass1.mtx)
+
+
+ plot(x=range(do.call('c', lapply(Set.Train.mean_osProbClass1.roc.mtx.lst,
+                function(LL) LL[,'FP'])))/sum(Train.Label.vec==CLASS2),
+      y=range(do.call('c', lapply(Set.Train.mean_osProbClass1.roc.mtx.lst,
+                function(LL) LL[,'TP'])))/sum(Train.Label.vec==CLASS1),
+      xlab='FP', ylab='TP', type='n')
+
+ for(II in 1:length(Set.Train.mean_osProbClass1.roc.mtx.lst))
+ lines(x=Set.Train.mean_osProbClass1.roc.mtx.lst[[II]][,'FP']/sum(Train.Label.vec==CLASS2),
+       y=Set.Train.mean_osProbClass1.roc.mtx.lst[[II]][,'TP']/sum(Train.Label.vec==CLASS1),
+       col=Model.col[names(Set.Train.roc.mtx.lst)[II]])
+ abline(0,1, col='grey')
+ legend('bottomright',
+        legend=paste(names(Set.Train.mean_osProbClass1.auc.vec), ':',
+          round(Set.Train.mean_osProbClass1.auc.vec,3),sep=''),
+        col=Model.col[names(Set.Train.mean_osProbClass1.auc.vec)], lty=1)
+ title('Model Performance on Train Set - OS mean Prob(MSS)')
+
+```
+<!-- ######################################################################## -->
+
+### Out-of-sample Set.Train: Individual Repeats
+
+```{r CompROCIndivOOSTrain, cache=FALSE, cache.vars='Set.Train.indiv_osProbClass1.mtx', fig.height=6, fig.width=11}
+ suppressMessages(require(pROC))
+
+ #################################
+ # Replot ROC keep individual rep osProbClass1
+ #################################
+ Set.Train.indiv_osProbClass1.mtx <- do.call('cbind', lapply(names(Set.ModelFit.osProbClass1.mtx.lst),
+  function(MODEL) {
+   osProbClass1.mtx <- Set.ModelFit.osProbClass1.mtx.lst[[MODEL]]
+   colnames(osProbClass1.mtx) <- paste(MODEL, colnames(osProbClass1.mtx),sep='.')
+   osProbClass1.mtx}))
+ rownames(Set.Train.indiv_osProbClass1.mtx) <- names(Train.Label.vec)
+
+ # ROC
+ Set.Train.indiv_osProbClass1.roc.mtx.lst <- lapply(colnames(Set.Train.indiv_osProbClass1.mtx), function(MM)
+    do.call('rbind', lapply(rev(sort(unique(Set.Train.indiv_osProbClass1.mtx))),
+     function(TS) {
+        TP <- sum(Set.Train.indiv_osProbClass1.mtx[,MM][Train.Label.vec==CLASS1] > TS, na.rm=T)
+        FP <- sum(Set.Train.indiv_osProbClass1.mtx[,MM][Train.Label.vec==CLASS2] > TS, na.rm=T)
+        c(TS=TS, TP=TP, FP=FP)}))
+   )
+ names(Set.Train.indiv_osProbClass1.roc.mtx.lst) <- colnames(Set.Train.indiv_osProbClass1.mtx)
+
+
+ # Get auc
+ Set.Train.indiv_osProbClass1.auc.vec <- sapply(1:ncol(Set.Train.indiv_osProbClass1.mtx), function(CC)
+   auc(Train.Label.vec, Set.Train.indiv_osProbClass1.mtx[,CC]))
+ names(Set.Train.indiv_osProbClass1.auc.vec) <- colnames(Set.Train.indiv_osProbClass1.mtx)
+
+ Set.Train.mean_indiv_osProbClass1.auc.vec <- sapply(split(Set.Train.indiv_osProbClass1.auc.vec,
+   sapply(strsplit(names(Set.Train.indiv_osProbClass1.auc.vec), split='\\.'),'[',1)),
+   mean)
+
+ plot(x=range(do.call('c', lapply(Set.Train.indiv_osProbClass1.roc.mtx.lst,
+                function(LL) LL[,'FP'])))/sum(Train.Label.vec==CLASS2),
+      y=range(do.call('c', lapply(Set.Train.indiv_osProbClass1.roc.mtx.lst,
+                function(LL) LL[,'TP'])))/sum(Train.Label.vec==CLASS1),
+      xlab='FP', ylab='TP', type='n')
+
+ for(II in 1:length(Set.Train.indiv_osProbClass1.roc.mtx.lst))
+ lines(x=Set.Train.indiv_osProbClass1.roc.mtx.lst[[II]][,'FP']/sum(Train.Label.vec==CLASS2),
+       y=Set.Train.indiv_osProbClass1.roc.mtx.lst[[II]][,'TP']/sum(Train.Label.vec==CLASS1),
+       col=Model.col[sapply(strsplit(names(Set.Train.indiv_osProbClass1.roc.mtx.lst),'\\.'),'[',1)[II]])
+ abline(0,1, col='grey')
+ legend('bottomright',
+        legend=paste(names(Set.Train.mean_indiv_osProbClass1.auc.vec), ':',
+        round(Set.Train.mean_indiv_osProbClass1.auc.vec,3),sep=''),
+       col=Model.col[names(Set.Train.mean_indiv_osProbClass1.auc.vec)],lty=1)
+ title('Model Performance on Set.Train Set - indiv OS Prob(MSS)')
+
+
+ # Boxplot individual aucs
+ boxplot(split(Set.Train.indiv_osProbClass1.auc.vec,
+   sub('Fit','', sapply(strsplit(names(Set.Train.indiv_osProbClass1.auc.vec), split='\\.'),'[',1))))
+ title('Distribution of AUC stats over CV reps')
+
+  Set.Train.indiv_osProbClass1.auc.mtx <- do.call('rbind',
+  lapply(split(Set.Train.indiv_osProbClass1.auc.vec,
+   sapply(strsplit(names(Set.Train.indiv_osProbClass1.auc.vec), split='\\.'),'[',1)),
+   function(x) {Res=x; names(Res)<- sapply(strsplit(names(Res),split='\\.'),'[',2);Res}))
+
+ # This is redundant
+ #kable(data.frame(Set.Train.indiv_osProbClass1.auc.mtx,
+                  #mean_os=Set.Train.mean_osProbClass1.auc.vec),
+                  ##Test = Test.auc.vec),
+    #digits=2, format='html',align='c')
+
+```
+<!-- ######################################################################## -->
+
+
+### Compare Predicted Probabilities
+
+With the repeated CV fitting set-up, we can examine the distribution of out-of-sample
+predictions.   This is useful to both characterize the mode of errors occuring
+in a given model - are the errors due to bias or variability? - as well as
+chracterizing samples - some samples may be mis-labelled or hard to 
+classify correctly.
+
+```{r CompOOSSet.TrainProbClass1, cache=FALSE, cache.vars='', fig.height=12, fig.width=12}
+  if(sum(rownames(Set.Train.indiv_osProbClass1.mtx) !=
+         names(Train.Label.vec)))
+  stop("Sample ordering problem.")
+
+  # Reorder by Outcome
+  row.o <- order(Train.Label.vec, names(Train.Label.vec))
+
+  Col.Models.vec <- sapply(strsplit(colnames(Set.Train.indiv_osProbClass1.mtx), split='\\.'),'[',1)
+
+  par(mfrow=c(length(unique(Col.Models.vec)),1), mar=c(0,5,2,1), oma=c(5,0,1,0))
+
+  for(MOD in unique(Col.Models.vec)) {
+   Mod.cols <- which(Col.Models.vec==MOD)
+
+   box.out <-
+   boxplot(t(Set.Train.indiv_osProbClass1.mtx[row.o,Mod.cols]),
+           col=ifelse(Train.Label.vec[row.o]==CLASS1,3,2),
+           xaxt='n', outline=F)
+   title(MOD)
+  }
+
+```
+<!-- ######################################################################## -->
+
+```{r varImpHelp, echo=FALSE, cache=TRUE, cache.vars='caret.varImp.path'}
+ # CHANGE TO CLEAR CACHE .
+ caret.varImp.path <- file.path(help_DIR, 'caret.varImp.thml')
+ static_help("caret", "varImp", out=caret.varImp.path)
+```
+
+## Look at Variable Importance
+
+The `caret` package provides methods to extract variable importance through
+the [varImp](`r caret.varImp.path`) function.  Here we will extract these assessments
+for each model and compare with genes which have been identified as associated with
+MSS status in other studies:  
+
+- BANERJEA [@Banerjea:2004aa]
+- CROCE [@CROCE]
+- JORISSEN [@Jorissen:2009aa]
+- KOINUMA [@Koinuma:2005aa]
+- KRUHOFFER [@Kruhoffer:2005aa]
+- MORI [@Mori:2003aa]
+
+```{r readGeneSets, echo=T}
+  MSSMSI.GeneSets.frm <- read.table(file=file.path(EXT_DATA, "ColonCancerGeneSets.tab"),
+   header=T, sep='\t')
+
+  GeneSets.lst <- split(MSSMSI.GeneSets.frm$GeneSymbol, toupper(MSSMSI.GeneSets.frm$ListName))
+  GeneSets.lst <- GeneSets.lst[c('BANERJEA','CROCE','JORISSEN', 'KOINUMA', 'KRUHOFFER','MORI')]
+
+```
+
+```{r varImp, cache=FALSE}
+ suppressMessages(require(caret))
+
+ # Load gene to probe set map
+ load(file=file.path(WRKDIR, 'Data', 'GeneNameMap.vec'))
+ 
+ # Will also need the inverted map
+ GeneNameMap2.vec <- names(GeneNameMap.vec)
+ names(GeneNameMap2.vec) <- GeneNameMap.vec
+
+  Set.ModelFit.Top20.lst <- lapply(setdiff(names(Set.ModelFit.lst),
+                                   c("knnFit","sddaLDAFit","sddaQDAFit")),
+  function(MOD) {
+    #cat(MOD,'\n')
+    FIT <- Set.ModelFit.lst[[MOD]]
+
+    if(is.element(CLASS1, colnames(varImp(FIT)$imp)))
+    impVar.vec <- varImp(FIT)$imp[,CLASS1] else
+    impVar.vec <- varImp(FIT)$imp$Overall
+
+    top20.ndx <- rev(order(impVar.vec))[1:20]
+    varImp.vec <- impVar.vec[top20.ndx]
+    names(varImp.vec) <- rownames(varImp(FIT)$imp)[top20.ndx]
+    varImp.vec
+    })
+  names(Set.ModelFit.Top20.lst) <- setdiff(names(Set.ModelFit.lst),
+                                   c("knnFit","sddaLDAFit","sddaQDAFit"))
+
+  Top20.Name.vec <- unique(do.call('c', lapply(Set.ModelFit.Top20.lst, function(VV) names(VV))))
+
+  Top20.ProbeId.vec <- GeneNameMap.vec[Top20.Name.vec]
+
+  # Put together in a matrix
+  Top20.varImp.mtx <- do.call('cbind', lapply(Set.ModelFit.Top20.lst,
+   function(LL) LL[Top20.Name.vec]))
+  rownames(Top20.varImp.mtx) <- GeneNameMap.vec[Top20.Name.vec]
+  Top20.varImp.mtx[is.na(Top20.varImp.mtx)] <- 0
+
+  # Reoder by ovrall importance
+  varImp.med.vec <- apply(Top20.varImp.mtx,1,median)
+  Top20.varImp.mtx <- Top20.varImp.mtx[rev(order(varImp.med.vec)),]
+
+
+  Top20.varImp.frm <- data.frame(PROBEID=rownames(Top20.varImp.mtx), 
+                                 Gene=GeneNameMap2.vec[rownames(Top20.varImp.mtx)],
+                                 round(Top20.varImp.mtx))
+  names(Top20.varImp.frm) <- sub('Fit', '', names(Top20.varImp.frm))
+
+
+
+  # Add geneset membership
+  Top20Genes.vec <- sapply(strsplit(Top20.varImp.frm$Gene, split='\\.'),'[',1)
+
+  Top20GeneSetElements.frm <- data.frame(do.call('cbind', lapply(GeneSets.lst,
+  function(GS) ifelse(is.element(Top20Genes.vec, GS),'Y',''))))
+  colnames(Top20GeneSetElements.frm) <- names(GeneSets.lst)
+
+  Top20.varImp.frm <- data.frame(Top20.varImp.frm, Top20GeneSetElements.frm)
+
+  o.v <- rev(order(apply(Top20.varImp.frm[,sub('Fit','',names(Set.ModelFit.Top20.lst))],
+           1, mean)))
+  print(kable(Top20.varImp.frm[o.v,], align='c', row.names=F))
+
+```
+
+## Classification: Discussion
+
+### Nearest shrunken centroids does well
+
+The [nearest shrunken centriod](http://statweb.stanford.edu/~tibs/PAM/) 
+ method described in Tibshirani et. al. [Tibshirani:2002aa] does very well
+both in terms of classification accuracy, computing time and simplicity
+of predictor.  This has been our experience with many classification
+problems based on gene expression data.
+
+
+### Lack of agreement with literature gene sets
+
+The variable importance assessment shows that the genes which
+are deemed important in the clsssifiers the we fitted
+have little overlap with the gene sets previously identified
+as being associated with MSS status.  Part of this lack of overlap
+is certanly due to the gene selection filter which we applied here
+for computing purposes.  This not a problem if we just want to
+build a classifier which predicts well.  It is somewhat of a problem 
+if we want to use biology to validate our empirically determined models.
+In that respect, the lack of agreement of gene lists across analyses
+is always a problem to contend with.
+
+### Models could be better optimized
+
+Note that we did not attempt to optimize the model tuning parameters in
+any way and just used the default search grids for each model.  While
+this may be a good choice on average, better performance could be
+obtained from some of the models by specifying a tuning parameter
+space which is better suited to the problem at hand.  This requires
+a good understanding of each model and is beyond the scope of this
+vignette.
+
+# Cluster Analysis
+
+In some cases one may be interested in discovering sugroups of samples within the sampled population
+which are more homogenious than the popolation as a whole.  Verhaak et. al. [@Verhaak:2010aa] describe
+an analysis pipeline for cluster discovery consisting of the following steps:  
+
+1. Data collection and integration
+2. Identification of gene-expression based sub-types by cluster analysis
+3. Marker gene signature identification
+4. Clustering validation and assessment of clinical significance
+
+In this section we will illustrate the cluster analysis step with two methods:  
+
+- Clustering based on partitioning around medoids (PAM) along with bootstrap aggregating (or Bagging).  
+- t-SNE
+
+The PAM algorithm for clustering is described in detail 
+in Kaufman and Rousseeuw [@Kaufmann:1990aa].  t-SNE is described 
+in [here](https://lvdmaaten.github.io/tsne/), with some
+illustrations [here](http://distill.pub/2016/misread-tsne/).
+
+We will treat the MSS/MSI status of samples in our data set as unknown and see if the
+clustering algorithms can *discover* these hidden classes.  A more interesting problem
+on the biological pint of view would be to try to **discover** truly unknown subgroups
+within the MSS and the MSI groups. 
+
+
+#### The PAM Clustering Algorithm {-}
+
+The PAM algorithm for clustering has some desirable attributes:  
+
+- the algorithm provides a way of estimating the number of clusters present in the data
+- each point is assigned to a cluster and a measure of strength or confidence in the cluster assignment is provided for each individual observation
+- cluster homogeneity can be assessed.  
+
+Underlying the PAM algorithm is a notion of similarity or proximity.  Basically, the PAM clustering algorithm sorts out a set of samples into subgroups such that within each subgroup, samples are more similar to other members of the subgroup than to samples assigned to other subgroups.  
+
+To define the notion of proximity, suppose the gene expression indicators are stored in a matrix $X$  with entries $x_{ij}$ being the gene expression indicator on log base 2 scale for sample i gene j.  Similarity among samples can be encapsulated by any of a number of measures of distance between the rows of the matrix $X$.
+Some common choices are the Euclidean distance (average coordinate squared difference), the Manhattan distance (average coordinate absolute difference), and a suitably transformed measure of correlation (2 – Pearson correlation, for example).  More generally, any weighted average of a coordinate specific measure of similarity can be used as a measure of sample similarity.  
+
+It is important to point out that for any fixed choice of distance quite different clustering results can be obtained depending on the selection of genes, or probe sets,  used to compute the sample to sample distances.  This is important to note because it is often necessary to apply a screen to subset genes or probe sets at the outset.  This is sometimes done to improve the computing efficiency of the analysis process.  Our experience with these data shows that if no screening is applied and all 50K+ probe sets are used to compute sample similarity measures, the clustering procedures are unable to detect even obvious structure in the data – the distinction between MSS and MSI samples, for example.  In this analysis, we applied a fairly aggressive screen based on the overall data set variability of expression indicators.  It might be advisable to apply the variability constraint to **within data set variability** to avoid selecting probe sets that may have high overall variability due to between data set artifactual variation.  This wasn't done here.
+
+Having computed a distance or dissimilarity matrix, the PAM algorithm proceeds iteratively as follows:  
+
+1. For fixed k (pre-specified number of clusters), select k representative samples arbitrarily.  
+2. Each sample of the data set is assigned to the nearest medoid.   
+3. Update medoids by minimizing the objective function   
+Repeat steps 2-3 until there is no further change.
+
+To measure confidence in the cluster assignment for each sample, and to get a sense of cluster homogeneity, the notion of silhouette is used.  The silhouette score is a normalized score:
+        $$s_i = \frac{b_i – a_i}{max(a_i, b_i)}$$
+ where  
+
+- $a_i$ = average distance between sample i and all other samples within the cluster i is assigned to, and
+- $b_i$ = minimum average distance between sample i and  samples in other clusters.
+
+Individual clusters can be characterized by average silhouette width.  The clustering or partitioning of a dataset can be summarized by the overall average silhouette width and his can be used to select the number of clusters, k, that best describes the structure in the data set.
+
+<!-- 
+Multidimensional scaling can be used to get a two-dimensional representation of the sample data points such that distances on the dimensional plane are good approximations of the actual distances in the original gene space. The scatter-plot on the right panel of Figure F1 is an example of a two-dimensional representation of the sample data.  In the scatter-plot, cluster assignment is indicated by the plotting character.  The ellipses that overlay the scatter-plot are minimum area ellipsoids that contain all of the samples in each cluster.  
+--> 
+
+#### Bootstrap Aggregating of Clusters {-}
+
+The application of bagging to clustering is discussed in Dudoit and Fridlyand [@Dudoit:2003aa].  
+
+Bootstrap aggregation entails performing the clustering analysis repeatedly on bootstrap subsets of samples – sample sets resulting from randomly selecting samples from the original set of samples.  The clustering results for the bootstrap samples are then pooled, or aggregated, to produce the final clustering results.  Two methods of aggregation are proposed in Dudoit and Fridlyand [@Dudoit:2003aa].  One method (BagClust1) allocates samples to clusters according to a voting scheme.  The other method (BagClust2) uses the relative frequency across bootstrap samples with which sample pairs are clustered together as a new measure of distance which is then used by the PAM algorithm to cluster the samples.  In our exploration we have found the two approaches to give rise to comparable results.  We find the latter to be preferable as the distance matrix used for aggregating the bootstrap clustering results can be used like any other distance matrix to assess confidence in sample assignments and overall clustering homogeneity.  
+
+Alternative methods of bagging clusters exist.  
+[buster](https://github.com/SimonRaper/buster) is an R package which implements
+some form of bagging  of hierarchical clustering results.  Li [@Li:2011aa] 
+discusses a bagged clustering algorithm which is resistent to outliers and scalable.
+
+
+Clustering preliminaries - load data and set parameters.
+```{r clusterPrelim}
+
+ # Load Data
+ loadObj(paste0('Train.',SelGenes,'.vec'), 'SelGenes.vec')
+ 
+ load(file=file.path(WRKDIR, 'Data', 'Train.Expr.mtx'))
+ Train.SelGenes.Expr.mtx <- Train.Expr.mtx[, SelGenes.vec]
+ rm(Train.Expr.mtx)
+
+ load(file=file.path(WRKDIR, 'Data', 'Train.Label.vec'))
+ load(file=file.path(WRKDIR, 'Data', 'Train.DataSource.vec'))
+
+```
+
+#### Clustering Parmeters:  
+- SelGenes = `r SelGenes`
+- Distance Metric = `r DM`
+- Standardize = `r STAND`
+
+
+## PAM Clustering
+
+We start by performing a standard PAM cluster analysis of the data.
+To quantify the concordance between the discoverd clusters and the MSS/MSI
+labels, we can compute [Cohen's Kappa](https://en.wikipedia.org/wiki/Cohen%27s_kappa).
+
+
+```{r pamCluster}
+ suppressMessages(require(stats))
+ suppressMessages(require(cluster))
+
+ Expr.mtx <- Train.SelGenes.Expr.mtx
+
+ # Standardize?
+ if(STAND) Expr.mtx <- scale(Expr.mtx)
+
+ # Get dissimilarity
+ {if(DM == "1-pearson")
+   Expr.dist <- as.dist(1-cor(t(Expr.mtx))) else
+   Expr.dist <- daisy(Expr.mtx, DM)
+ }
+
+ # get ave sil width for range of K
+ asw.vec <- sapply(2:5, function(kk) pam(Expr.dist, diss=T, k=kk)$silinfo$avg.width)
+ names(asw.vec) <- paste0('K_', 2:5)
+
+ print(round(asw.vec,3))
+
+``` 
+
+PAM returns the correct number of clusters, if we are trying to recover the MSS/MSI
+subgroups.  Let us look at what the clustering looks like.
+
+```{r ViewPamCluster, fig.width=12, fig.height=12}
+###, results='hold'} this  r chunk option doesn't appear to work!
+ suppressMessages(require(cluster))
+ BestK <- as.numeric(sub('K_','', names(asw.vec)[which.max(asw.vec)]))
+
+ # Make sure Expr.dist hasn't changed!
+ Expr.pam <- pam(Expr.dist, k=BestK, keep.diss=T)
+
+ # Look at agreement with MSS label
+ Pam.agree.tbl <- table(Expr.pam$clustering, Train.Label.vec)
+
+ # Compute kappa for display on figure
+ # (Only makes sense for BestK==2)
+ kappa.v <- NA
+ if(BestK == 2) kappa.v <- getKappa(Expr.pam$clustering, Train.Label.vec)
+
+ #######################################
+ # Visualization
+ #######################################
+ old_par <- par(mfrow=c(1,1), oma=c(8,1,5,1), #mar=c(4.2, 3.2, 1.1, 0.2),
+      #bg=rgb(0,0,.606),fg=7,col.axis=7,col.lab=7,col.main=7, col.sub=7,
+       cex.main=1.0,cex.lab=1.0,cex.axis=1.0)
+
+# DEBUG
+#save(Expr.pam, file=file.path(WRKDIR,'Data', 'Expr.pam'))
+#THIS DOEST WORK ANY MORE
+SKIP <- function() {
+   plot(Expr.pam,main='')
+   mtext2by2Tbl(Pam.agree.tbl)
+}# SKIP
+
+ ###################################
+ clusplot(Expr.pam, main='')###, pch=DataSource.pch)
+
+ ### Recolor samples according to MSS/MSI status
+ #xD <- eval(Expr.pam$call[[2]])
+ xD <- Expr.pam$diss
+ x1 <- cmdscale(xD, k=2, eig=T, add=T)
+ if(x1$ac < 0)
+    x1 <- cmdscale(xD, k=2, eig=T)
+ #var.dec <- x1$GOF[2]
+ x1 <- x1$points
+
+ points(x1[,1][Train.Label.vec=='MSI'], x1[,2][Train.Label.vec=='MSI'],
+         pch='.',cex=3, col='red')
+ # add 2x2 tbale in margin
+ mtext2by2Tbl(Pam.agree.tbl)
+
+ title(paste('Red dot = MSI samples',
+  '\nAve. Sil. Width = ', round(Expr.pam$silinfo$avg.width,3),
+  '  Kappa = ', round(kappa.v,3)))
+ 
+ par(old_par)
+
+```
+
+Although the MSS and MSI somewhat colocate on the
+two dimensional projection of their gene expression vectors, one would be hard-pressed
+to make the case that clusters exist in these data.
+Next we'll see if bootstrap aggregation helps.
+
+## Bootstrap Aggregation of Clusters
+
+Next we will implement the baaged clustering procedure, BagClust2:
+
+For a fixed number of clusters K:  
+
+1. Initialize matrices $A_{nxn}$ and $M_{nxn}$ to zeroes.  
+
+Repeat 2-4 N_BOOT times:  
+
+	2. Form the $b^{th}$ bootstrap sample, Bt_Samp
+	3. Cluster Bt_Samp to obtain cluster labels Bt_Clust
+	4. For each pair of samples in Bt_Samp, s1, s2
+		- increment $M_{s1,s1}$
+		- increment $A_{s1,s1}$ if s1 and s2 co-cluster in the $b^{th}$ bootstarp sample.  
+end repeat.
+
+5. Define a new dissimilarity matrix $D = 1 - A/M$
+6. Cluster samples on the basis of this dissimilarity matrix.
+
+```{r BagClust2, cache=T, cache.vars=''}
+ suppressMessages(require(cluster))
+ suppressMessages(require(stats))
+
+ N_BOOT <- 30
+
+ # initialize list to store BagCLust results
+ SelGenes.BagClust.pam.lst <- list()
+ 
+ for(KK in 2:5) {
+  # Initialize counting matrices
+  A.mtx <- matrix(0, ncol=length(Train.Label.vec),
+                     nrow=length(Train.Label.vec))
+  rownames(A.mtx) <- names(Train.Label.vec)
+  colnames(A.mtx) <- names(Train.Label.vec)
+
+  M.mtx <- matrix(0, ncol=length(Train.Label.vec),
+                     nrow=length(Train.Label.vec))
+  rownames(M.mtx) <- names(Train.Label.vec)
+  colnames(M.mtx) <- names(Train.Label.vec)
+
+
+  # Repeat 2-4 B times
+  # 2. Form the b_th bootstrap sample Bt_Samp =
+  #       sample(Samp.vec, size=N_Samp, replace=T)
+  # 3. Cluster to obtain cluster labels Bt_Clust for samples in Bt_Samp
+  # 4. For each pair of samples in Bt_Samp, s1, s2,
+  #     - increment M[s1,s2]
+  #     - increment A[s1,s1] if Bt_Clust[s1] == Bt_Clust[2]
+  # end repeat
+  for(BB in 1:N_BOOT){
+   cat('.')
+   # 2. form the BS sample
+   B_Samp <- sample(names(Train.Label.vec), size=length(Train.Label.vec), replace=T)
+
+   Expr.B.mtx <- Expr.mtx[B_Samp,]
+
+   # Get dissimilarity
+   {if(DM == "1-pearson")
+     Expr.B.dist <- as.dist(1-cor(t(Expr.B.mtx))) else
+     Expr.B.dist <- daisy(Expr.B.mtx, DM)
+   }
+   rm(Expr.B.mtx)
+
+   # 3. cluster
+   Expr.B.pam <- pam(Expr.B.dist, k=KK)
+
+   # 4. For each pair of samples in Bt_Samp, s1, s2,
+   #     - increment M[s1,s2]
+   #     - increment A[s1,s1] if Bt_Clust[s1] == Bt_Clust[2]
+   B_Samp.lst <- unique(B_Samp)
+
+   M.mtx[B_Samp.lst, B_Samp.lst] <-   M.mtx[B_Samp.lst, B_Samp.lst] + 1
+
+   # patition in list
+   B_Samp.Cluster <- Expr.B.pam$clustering[B_Samp.lst]
+   B_Samp.Clust.lst <- split(B_Samp.lst, B_Samp.Cluster)
+
+   for(LL in 1:length(B_Samp.Clust.lst)) {
+    Clust.Samp <- B_Samp.Clust.lst[[LL]]
+    A.mtx[Clust.Samp, Clust.Samp] <-   A.mtx[Clust.Samp, Clust.Samp] + 1
+   }
+  } # end BB loop
+  cat('\n')
+
+  # 5. Define new dissimilariy matirx D = 1 - A/M
+  D.mtx <- A.mtx/M.mtx
+  D.mtx[is.na(D.mtx)] <- 0
+ 
+  # 6. Cluster observations on the basis of this dissimilarity matrix
+  D.dist <- as.dist(1-D.mtx)
+  SelGenes.BagClust.pam.lst[[paste0('K_',KK)]] <- pam(D.dist, k=KK, keep.diss=T)
+  cat('KK =',KK, '   sil.avg.width =', SelGenes.BagClust.pam.lst[[paste0('K_',KK)]]$silinfo$avg.width, '\n')
+ }#for(KK
+
+ ## save 
+ saveObj(paste0(SelGenes, '.BagClust.pam.lst'), 'SelGenes.BagClust.pam.lst')
+
+```
+<!-- ****************************************************************** -->
+
+```{r lkBagClust2, fig.height=12, fig.width=12}
+ suppressMessages(require(cluster))
+
+ loadObj(paste0(SelGenes, '.BagClust.pam.lst'), 'SelGenes.BagClust.pam.lst')
+
+ # Get best K model
+ BagClustBestK <- names(SelGenes.BagClust.pam.lst)[which.max(sapply(SelGenes.BagClust.pam.lst,
+  function(x) x$silinfo$avg.width))]
+
+ BagClustBestK.pam <- SelGenes.BagClust.pam.lst[[BagClustBestK]]
+
+ # Get agreement table
+ BagClustBestK.pam.agree.tbl <- table(BagClustBestK.pam$clustering, Train.Label.vec)
+
+ #Compute kappa for display on figure
+ # (Only makes sense for KK==2)
+ if(BagClustBestK == paste0('K_',2)) 
+ kappa.v <- getKappa(BagClustBestK.pam$clustering, Train.Label.vec)
+ #cat('kappa =', kappa.v, '\n')
+
+ #######################################
+ # Visualization
+ #######################################
+ old_par <- par(mfrow=c(1,1), oma=c(8,1,5,1), #mar=c(4.2, 3.2, 1.1, 0.2),
+      #bg=rgb(0,0,.606),fg=7,col.axis=7,col.lab=7,col.main=7, col.sub=7,
+       cex.main=1.0,cex.lab=1.0,cex.axis=1.0)
+
+ #plot(BagClustBestK.pam,main='')
+
+ clusplot(BagClustBestK.pam, main='')###, pch=DataSource.pch)
+
+ ### Recolor samples according to MSS/MSI status
+ #xD <- eval(BagClustBestK.pam$call[[2]])
+ xD <- BagClustBestK.pam$diss
+ x1 <- cmdscale(xD, k=2, eig=T, add=T)
+ if(x1$ac < 0)
+    x1 <- cmdscale(xD, k=2, eig=T)
+ #var.dec <- x1$GOF[2]
+ x1 <- x1$points
+
+ points(x1[,1][Train.Label.vec=='MSI'], x1[,2][Train.Label.vec=='MSI'],
+         pch='.',cex=3, col='red')
+
+ # add 2x2 tbale in margin
+ mtext2by2Tbl(BagClustBestK.pam.agree.tbl)
+
+ title(paste('Red dot = MSI samples',
+  '\nAve. Sil. Width = ', round(BagClustBestK.pam$silinfo$avg.width,3),
+  '  Kappa = ', round(kappa.v,3)))
+
+
+ par(old_par)
+ 
+```
+
+The groupings discovered by BagClust2 are essentially the same as those discovered
+by the PAM cluster analysis.  The main effect of the bagging is to reduce noise and 
+provide better separation between groups, which greatly increases our confidence in the
+groupings. 
+
+Next we look at the application of t-SNE algorithm to this problem.
+
+## t-SNE
+
+t-SNE is a dimensionality reduction techique that is particularly well suited for the 
+visualization of high-dimensional datasets.  Here we will use the t-SNE algorithm to 
+reduce the gene expression data martrix to a few dimensions.  These will then be 
+used as inputs to some clustering algorithm for the purpose of discovering subgroups
+in the data.  Here we will assess the benefit of the t-SNE embedding by repeating the
+cluster analysis above - PAM and BagClust2 clustering - using the t-SNE embedding as input
+instead of the scales expression matrix.
+
+```{r tSNEPrelim}
+ # Load Data
+ loadObj(paste0('Train.',SelGenes,'.vec'), 'SelGenes.vec')
+ 
+ load(file=file.path(WRKDIR, 'Data', 'Train.Expr.mtx'))
+ Train.SelGenes.Expr.mtx <- Train.Expr.mtx[, SelGenes.vec]
+ rm(Train.Expr.mtx)
+
+ load(file=file.path(WRKDIR, 'Data', 'Train.Label.vec'))
+ load(file=file.path(WRKDIR, 'Data', 'Train.DataSource.vec'))
+
+```
+
+```{r tSNE, cache=T, cache.vars=''}
+
+ suppressMessages(require(Rtsne))
+ PERP <- 50
+ SelGenes.tsne.lst <- list()
+
+ for(DD in c(2,5,10))
+  SelGenes.tsne.lst[[paste0('D_', DD)]] <- 
+  Rtsne(Train.SelGenes.Expr.mtx, check_duplicates=FALSE, 
+        pca=TRUE, pca_center=T, pca_scale=T,
+        perplexity=PERP, theta=0.0, dims=DD, max_iter = 5000)
+  
+ saveObj(paste0(SelGenes, '.tsne.lst'), 'SelGenes.tsne.lst')
+```
+
+### t-SNE + PAM
+
+```{r tsnePAMCluster} 
+ suppressMessages(require(stats))
+ suppressMessages(require(cluster))
+
+ loadObj(paste0(SelGenes, '.tsne.lst'), 'SelGenes.tsne.lst')
+
+
+ tsne.asw.mtx <- do.call('rbind', lapply(names(SelGenes.tsne.lst),
+ function(DD) {
+  Expr.mtx <- SelGenes.tsne.lst[[DD]]$Y
+
+  # Standardize?
+  #if(STAND) Expr.mtx <- scale(Expr.mtx)
+
+  # Get dissimilarity
+  {if(DM == "1-pearson")
+    Expr.dist <- as.dist(1-cor(t(Expr.mtx))) else
+    Expr.dist <- daisy(Expr.mtx, DM)
+  }
+
+  # get ave sil width for range of K
+  asw.vec <- sapply(2:5, function(kk) pam(Expr.dist, diss=T, k=kk)$silinfo$avg.width)
+  names(asw.vec) <- paste0('K_', 2:5)
+
+  asw.vec}))
+  rownames(tsne.asw.mtx) <- names(SelGenes.tsne.lst)
+
+  print(round(tsne.asw.mtx,3))
+
+``` 
+
+PAM clustering based on t-SNE embeddings of various dimensions does not
+return  allow us to discriminate among the number of clusters based on average
+silhouette width.  Let's see what the 2-D scatters look like 
+as well as the PAM clustering into two groups.
+
+```{r ViewTsnePamCluster, fig.width=12, fig.height=12, results='hold'}
+ suppressMessages(require(cluster))
+ loadObj(paste0(SelGenes, '.tsne.lst'), 'SelGenes.tsne.lst')
+
+ for(DD in names(SelGenes.tsne.lst)){
+  Expr.mtx <- SelGenes.tsne.lst[[DD]]$Y
+
+  # Standardize?
+  #if(STAND) Expr.mtx <- scale(Expr.mtx)
+
+  # Get dissimilarity
+  {if(DM == "1-pearson")
+    Expr.dist <- as.dist(1-cor(t(Expr.mtx))) else
+    Expr.dist <- daisy(Expr.mtx, DM)
+  }
+
+  #for(KK in 2:5) {
+  KK <- 2
+  Expr.pam <- pam(Expr.dist, diss=T, k=KK, keep.diss=T)
+  Pam.agree.tbl <- table(Expr.pam$clustering, Train.Label.vec)
+  kappa.v <- getKappa(Expr.pam$clustering, Train.Label.vec)
+ 
+  #######################################
+  # Visualization
+  #######################################
+  old_par <- par(mfrow=c(1,1), oma=c(8,1,5,1), #mar=c(4.2, 3.2, 1.1, 0.2),
+      #bg=rgb(0,0,.606),fg=7,col.axis=7,col.lab=7,col.main=7, col.sub=7,
+       cex.main=1.0,cex.lab=1.0,cex.axis=1.0)
+
+  #plot(Expr.pam,main='')
+
+  ###################################
+  clusplot(Expr.pam, main='')###, pch=DataSource.pch)
+
+  ### Recolor samples according to MSS/MSI status
+  #xD <- eval(Expr.pam$call[[2]])
+  xD <- Expr.pam$diss
+  x1 <- cmdscale(xD, k=2, eig=T, add=T)
+  if(x1$ac < 0)
+     x1 <- cmdscale(xD, k=2, eig=T)
+  #var.dec <- x1$GOF[2]
+  x1 <- x1$points
+ 
+  points(x1[,1][Train.Label.vec=='MSI'], x1[,2][Train.Label.vec=='MSI'],
+          pch='.',cex=3, col='red')
+
+  # add 2x2 tbale in margin
+  mtext2by2Tbl(Pam.agree.tbl)
+
+ title(paste('Dim =', DD, ' - Red dot = MSI samples',
+  '\nAve. Sil. Width = ', round(Expr.pam$silinfo$avg.width,3),
+  '  Kappa = ', round(kappa.v,3)))
+
+  par(old_par)
+
+ }#for(DD
+
+```
+
+PAM applied to t-SNE embeddings produce larger silhuoette profiles than
+PAM applied to the gene expression data.  Let's see how bagging helps here.
+
+### t-SNE + BagClust2
+
+An important parameter in the application of t-SNE to clustering is the
+number of dimensions used in the t-SNE embedding.  We will assess the effect of 
+this parameter here, keeping the specified number of clusters fixed at k=2 while
+varying the number of embedding dimensions.
+
+```{r tsneBagClust2, cache=T, cache.vars=''}
+ suppressMessages(require(cluster))
+ suppressMessages(require(stats))
+
+ KK <- 2
+
+ loadObj(paste0(SelGenes, '.tsne.lst'), 'SelGenes.tsne.lst')
+ load(file=file.path(WRKDIR, 'Data', 'Train.Label.vec'))
+
+ N_BOOT <- 30
+
+ # initialize list to store BagCLust results
+ SelGenes.tsneBagClust.pam.lst <- list()
+ 
+ for(DD in names(SelGenes.tsne.lst)){
+  Expr.mtx <- SelGenes.tsne.lst[[DD]]$Y
+ 
+  # Add rownames (assuming order is correct!)
+  rownames(Expr.mtx) <- names(Train.Label.vec)
+
+  # Initialize counting matrices
+  A.mtx <- matrix(0, ncol=length(Train.Label.vec),
+                     nrow=length(Train.Label.vec))
+  rownames(A.mtx) <- names(Train.Label.vec)
+  colnames(A.mtx) <- names(Train.Label.vec)
+
+  M.mtx <- matrix(0, ncol=length(Train.Label.vec),
+                     nrow=length(Train.Label.vec))
+  rownames(M.mtx) <- names(Train.Label.vec)
+  colnames(M.mtx) <- names(Train.Label.vec)
+
+
+  # Repeat 2-4 B times
+  # 2. Form the b_th bootstrap sample Bt_Samp =
+  #       sample(Samp.vec, size=N_Samp, replace=T)
+  # 3. Cluster to obtain cluster labels Bt_Clust for samples in Bt_Samp
+  # 4. For each pair of samples in Bt_Samp, s1, s2,
+  #     - increment M[s1,s2]
+  #     - increment A[s1,s1] if Bt_Clust[s1] == Bt_Clust[2]
+  # end repeat
+  for(BB in 1:N_BOOT){
+   cat('.')
+   # 2. form the BS sample
+   B_Samp <- sample(names(Train.Label.vec), size=length(Train.Label.vec), replace=T)
+
+   Expr.B.mtx <- Expr.mtx[B_Samp,]
+
+   # Get dissimilarity
+   {if(DM == "1-pearson")
+     Expr.B.dist <- as.dist(1-cor(t(Expr.B.mtx))) else
+     Expr.B.dist <- daisy(Expr.B.mtx, DM)
+   }
+   rm(Expr.B.mtx)
+
+   # 3. cluster
+   Expr.B.pam <- pam(Expr.B.dist, k=KK)
+
+   # 4. For each pair of samples in Bt_Samp, s1, s2,
+   #     - increment M[s1,s2]
+   #     - increment A[s1,s1] if Bt_Clust[s1] == Bt_Clust[2]
+   B_Samp.lst <- unique(B_Samp)
+
+   M.mtx[B_Samp.lst, B_Samp.lst] <-   M.mtx[B_Samp.lst, B_Samp.lst] + 1
+
+   # patition in list
+   B_Samp.Cluster <- Expr.B.pam$clustering[B_Samp.lst]
+   B_Samp.Clust.lst <- split(B_Samp.lst, B_Samp.Cluster)
+
+   for(LL in 1:length(B_Samp.Clust.lst)) {
+    Clust.Samp <- B_Samp.Clust.lst[[LL]]
+    A.mtx[Clust.Samp, Clust.Samp] <-   A.mtx[Clust.Samp, Clust.Samp] + 1
+   }
+  } # end BB loop
+  cat('\n')
+
+  # 5. Define new dissimilariy matirx D = 1 - A/M
+  D.mtx <- A.mtx/M.mtx
+  D.mtx[is.na(D.mtx)] <- 0
+ 
+  # 6. Cluster observations on the basis of this dissimilarity matrix
+  D.dist <- as.dist(1-D.mtx)
+  SelGenes.tsneBagClust.pam.lst[[DD]] <- pam(D.dist, k=KK, keep.diss=T)
+  cat('DD =',DD, '   sil.avg.width =', SelGenes.tsneBagClust.pam.lst[[DD]]$silinfo$avg.width, '\n')
+
+ }#for(DD
+
+ ## save 
+ saveObj(paste0(SelGenes, '.tsneBagClust.pam.lst'), 'SelGenes.tsneBagClust.pam.lst')
+
+```
+<!-- ****************************************************************** -->
+
+```{r lktsneBagClust2, fig.height=12, fig.width=12}
+ suppressMessages(require(cluster))
+
+ loadObj(paste0(SelGenes, '.tsneBagClust.pam.lst'), 'SelGenes.tsneBagClust.pam.lst')
+ load(file=file.path(WRKDIR, 'Data', 'Train.Label.vec'))
+
+ # Get best K model
+ BagClustBestD <- names(SelGenes.tsneBagClust.pam.lst)[which.max(sapply(SelGenes.tsneBagClust.pam.lst,
+  function(x) x$silinfo$avg.width))]
+
+ BagClustBestD.pam <- SelGenes.tsneBagClust.pam.lst[[BagClustBestD]]
+
+ # Get agreement table
+ BagClustBestD.pam.agree.tbl <- table(BagClustBestD.pam$clustering, Train.Label.vec)
+
+ #Compute kappa for display on figure
+ # (Only makes sense for KK==2)
+ kappa.v <- getKappa(BagClustBestD.pam$clustering, Train.Label.vec)
+ #cat('kappa =', kappa.v, '\n')
+
+ #######################################
+ # Visualization
+ #######################################
+ old_par <- par(mfrow=c(1,1), oma=c(8,1,5,1), #mar=c(4.2, 3.2, 1.1, 0.2),
+      #bg=rgb(0,0,.606),fg=7,col.axis=7,col.lab=7,col.main=7, col.sub=7,
+       cex.main=1.0,cex.lab=1.0,cex.axis=1.0)
+
+ #plot(BagClustBestD.pam,main='')
+
+ ###################################
+ clusplot(BagClustBestD.pam, main='')###, pch=DataSource.pch)
+
+ ### Recolor samples according to MSS/MSI status
+ #xD <- eval(BagClustBestD.pam$call[[2]])
+ xD <- BagClustBestD.pam$diss
+ x1 <- cmdscale(xD, k=2, eig=T, add=T)
+ if(x1$ac < 0)
+    x1 <- cmdscale(xD, k=2, eig=T)
+ #var.dec <- x1$GOF[2]
+ x1 <- x1$points
+
+ points(x1[,1][Train.Label.vec=='MSI'], x1[,2][Train.Label.vec=='MSI'],
+         pch='.',cex=3, col='red')
+  # add 2x2 tbale in margin
+  mtext2by2Tbl(BagClustBestD.pam.agree.tbl)
+
+ title(paste('Dim =', BagClustBestD, ' - Red dot = MSI samples',
+  '\nAve. Sil. Width = ', round(BagClustBestD.pam$silinfo$avg.width,3),
+  '  Kappa = ', round(kappa.v,3)))
+
+ par(old_par)
+ 
+```
+
+## Cluster Analysis: Discussion
+
+- The PAM algorithm does a decent job at "discovering" the MSS vs MSI grouping
+in an unsupervised analysis of the gene expression vectors.  In this analysis,
+we restricted the analysis to the `r SelGenes` gene set.  A different gene selection
+might give rise to sligthly different results.  
+
+- Bootstrap aggregation of PAM clustering results leads to cleaner separation
+among the groups but very little difference in the allocation of samples to groups.  This
+is as expected.  Bagging in thise case is a noise reduction measure.
+
+- Applying the t-SNE algorithm to extract low dimensional embeddings of the gene expression
+vectors and applying the PAM algorthim to these data leads to some improved clustering
+results: separation of the groups is larger than is the results of applying PAM directly 
+to the gene expression data.
+
+- Bootstrap aggregation of results of applying PAM clustering to t-SNE embeddings
+leads to improved separation between groups and a slight improvement in the coherence
+between clusters and MSS vs MSI labels.
+
+
+It appears that both t-SNE embeddings and bootstrap aggregation are helpful
+in producing better separated clusters in this context.  We have only skimmed 
+the surface of cluster analysis of gene expression data in this vignette.
+We did not look at the propensity of the different approaches to produce 
+fals positive results - the appearance of clusters when non exist. 
+We also did not investigate the effect of the choice of value for the many parameters
+that can be adjusted in these analyses.  In any given situation, the sensitivity
+of results produced  by a method to changes in parameter settings or
+slight perturbations of the data is an important part of cluster analysis.
+
+## Next Step: Look for subgroups in the MSS population - an open biological question.
+
+
+<!-- Put bib here If applicable -->
+***
+# References
+<div id="refs"></div>
+
+***
+# User defined functions used in this script: 
+
+- [saveObj](`r file.path(help_DIR, 'saveObj.r')`) and
+[loadObj](`r file.path(help_DIR, 'loadObj.r')`) are used 
+to move objects between the file system and the workspace.
+- [getKappa](`r file.path(help_DIR, 'getKappa.r')`) computes Cohen's kappa 
+which we use as a measure of agreement between clutering results and labels.
+- [mtext2by2Tbl](`r file.path(help_DIR, 'mtext2by2Tbl.r')`) prints a 2 by 2 table below a plot.
+
+***
+# Parameter settings
+  * WRKDIR = `r WRKDIR`
+  * FN = `r FN`
+  * Scripts = Scripts
+  * EXT_DATA = `r EXT_DATA`
+  * RUN DATE = `r date()`
+
+```{r, echo=FALSE}
+ sessionInfo()
+```
+
+
+```{r, echo=FALSE}
+  knit_exit()
+```
+
+### ARCHIVAL CODE BELOW
+
+
+<!-- To run
+# sudo nohup Rscript -e "knitr::knit2html('M1A-CRC.Rmd')" > M1A-CRC.log  &
+
+# Or
+# sudo nohup Rscript -e "rmarkdown::render('M1A-CRC.Rmd')" > M1A-CRC.log  &
+
+-->
+

@@ -1,0 +1,134 @@
+ListName	GeneSymbol	GeneName	OtherName	Dummy
+banerjea	ACVR1B	ACVR1B		Dummy
+banerjea	AMFR	AMFR		Dummy
+banerjea	ATP9A	ATP9A		Dummy
+banerjea	BRAF	BRAF		Dummy
+banerjea	CTDP1	CTDP1		Dummy
+banerjea	CTNNB1	B-Catenin		Dummy
+banerjea	DDX27	DDX27		Dummy
+banerjea	EIF5A	EIF5A		Dummy
+banerjea	ERC1	ERC1		Dummy
+banerjea	FLII	FLII		Dummy
+banerjea	HNRPL	HNRPL		Dummy
+banerjea	JUN	JUN		Dummy
+banerjea	KIAA1219	KIAA1219		Dummy
+banerjea	MTA2	MTA2		Dummy
+banerjea	PLAGL2	PLAGL2		Dummy
+banerjea	RNF38	RNF38		Dummy
+banerjea	SERINC3	SERINC3		Dummy
+banerjea	SET	SET		Dummy
+banerjea	SFRS6	SFRS6		Dummy
+banerjea	SNRPD1	SNRPD1		Dummy
+banerjea	TGIF2	TGIF2		Dummy
+banerjea	TYMS	TS		Dummy
+banerjea	ZMYND8	PRKCBP1		Dummy
+croce	AREG	AREG		Dummy
+croce	BEST1	BEST1		Dummy
+croce	C13ORF18	C13orf18		Dummy
+croce	CCDC68	CCDC68		Dummy
+croce	FAM84A	FAM84A		Dummy
+croce	GGH	GGH		Dummy
+croce	GNG4	GNG4		Dummy
+croce	GTF2IRD1	GTF2IRD1		Dummy
+croce	H2AFJ	H2AFJ		Dummy
+croce	JHDM1D	JHDM1D		Dummy
+croce	KIAA1219	KIAA1219		Dummy
+croce	KRT75	KRT75		Dummy
+croce	MT2A	MT2A		Dummy
+croce	NKD1	Nkd-1		Dummy
+croce	PLAGL2	PLAGL2		Dummy
+croce	PPP1R14D	PPP1R14D		Dummy
+croce	RNF43	RNF43		Dummy
+croce	TDGF1	cripto (TDGF1 official)		Dummy
+croce	VAV3	VAV3		Dummy
+jorissen	ANP32E	ANP32E		Dummy
+jorissen	C13ORF18	C13orf18		Dummy
+jorissen	CDC14B	CDC14B		Dummy
+jorissen	DAB2	DAB2		Dummy
+jorissen	DDAH2	DDAH2		Dummy
+jorissen	EIF5A	EIF5A		Dummy
+jorissen	EPB41L4B	EPB41L4B		Dummy
+jorissen	H2AFJ	H2AFJ		Dummy
+jorissen	KIAA0372	KIAA0372		Dummy
+jorissen	PHACTR2	PHACTR2		Dummy
+jorissen	PHF20	PHF20		Dummy
+jorissen	RABEP1	RABEP1		Dummy
+jorissen	SHANK2	SHANK2		Dummy
+jorissen	TFAP2A	TFAP2A		Dummy
+jorissen	TMCC1	TMCC1		Dummy
+jorissen	TMEPAI	TMEPAI		Dummy
+jorissen	TMF1	TMF1		Dummy
+jorissen	TXNDC9	TXNDC9		Dummy
+jorissen	WARS	WARS		Dummy
+jorissen	ZNF148	ZNF148		Dummy
+koinuma	ANP32E	ANP32E		Dummy
+koinuma	AW960707			Dummy
+koinuma	AXIN2	Axin 2		Dummy
+koinuma	CD109			Dummy
+koinuma	CHMP4B	CHMP4B		Dummy
+koinuma	CTNNB1	B-Catenin		Dummy
+koinuma	CXCL10	CXCL10		Dummy
+koinuma	CXCL9			Dummy
+koinuma	EMP1			Dummy
+koinuma	ERH			Dummy
+koinuma	FBXL16			Dummy
+koinuma	HLA-DMB			Dummy
+koinuma	HNRNPL	HNRPL		Dummy
+koinuma	HOXC6			Dummy
+koinuma	HSPH1	HSPH1		Dummy
+koinuma	LAP3	LAP3		Dummy
+koinuma	LAPTM4B			Dummy
+koinuma	MLH1	hMLH		Dummy
+koinuma	NCAPG	NCAPG		Dummy
+koinuma	PMEPA1			Dummy
+koinuma	PSMB5			Dummy
+koinuma	RPL22L1			Dummy
+koinuma	TPBG			Dummy
+koinuma	TYMS	TS		Dummy
+Kruhoffer	ATP9A	ATP9A		Dummy
+Kruhoffer	CXCL10	CXCL10		Dummy
+Kruhoffer	HNRNPL	HNRPL		Dummy
+Kruhoffer	MTA2	MTA2	MTA1L1	Dummy
+Kruhoffer	SET	SET		Dummy
+Kruhoffer	SFRS6	SFRS6		Dummy
+Kruhoffer	TMEM176A	HCA112		Dummy
+Kruhoffer	TUG1	TUG1	FLJ20618	Dummy
+Kruhoffer	ZMYND8	PRKCBP1		Dummy
+mori	BIRC3			Dummy
+mori	COL4A2			Dummy
+mori	CXCL1			Dummy
+mori	CYP3A5			Dummy
+mori	DPEP1			Dummy
+mori	GSTM3			Dummy
+mori	IGFBP2			Dummy
+mori	LCN2			Dummy
+mori	LIMS1			Dummy
+mori	MMP7			Dummy
+mori	REG1A			Dummy
+mori	SLC6A8			Dummy
+mori	TM4SF1			Dummy
+mori	TM4SF4			Dummy
+mori	UBD			Dummy
+mori_3component	AF358454			Dummy
+mori_3component	AGR2			Dummy
+mori_3component	AKR1C3			Dummy
+mori_3component	BST2			Dummy
+mori_3component	CD24			Dummy
+mori_3component	FABP1			Dummy
+mori_3component	GATM			Dummy
+mori_3component	HDAC3			Dummy
+mori_3component	HMGCS2			Dummy
+mori_3component	MMP3			Dummy
+mori_3component	MT1E			Dummy
+mori_3component	MUC1			Dummy
+mori_3component	MUC5B			Dummy
+mori_3component	OLFM1			Dummy
+mori_3component	REG1A			Dummy
+mori_3component	SELENBP1			Dummy
+mori_3component	SPP1			Dummy
+mori_3component	UBE2L6			Dummy
+mori_3component	VIL1			Dummy
+mori_3component	WARS			Dummy
+GHI3Gene	AXIN2	Axin 2		Dummy
+GHI3Gene	TYMS	TS		Dummy
+GHI3Gene	CLDN7	CLDN7		Dummy

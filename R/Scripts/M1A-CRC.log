@@ -1,0 +1,529 @@
+
+
+processing file: M1A-CRC.Rmd
+  |                                                                         |                                                                 |   0%  |                                                                         |.                                                                |   1%
+   inline R code fragments
+
+  |                                                                         |.                                                                |   2%
+label: GlobalOptions (with options) 
+List of 3
+ $ results: chr "hide"
+ $ include: logi FALSE
+ $ cache  : logi FALSE
+
+  |                                                                         |..                                                               |   3%
+  ordinary text without R code
+
+
+label: Prelims (with options) 
+List of 4
+ $ include: logi FALSE
+ $ echo   : logi FALSE
+ $ results: chr "hide"
+ $ message: logi FALSE
+
+  |                                                                         |...                                                              |   4%
+  ordinary text without R code
+
+  |                                                                         |...                                                              |   5%
+label: utilityFns (with options) 
+List of 1
+ $ echo: logi FALSE
+
+  |                                                                         |....                                                             |   6%
+  ordinary text without R code
+
+  |                                                                         |.....                                                            |   7%
+label: runParam (with options) 
+List of 1
+ $ echo: logi FALSE
+
+  |                                                                         |.....                                                            |   8%
+  ordinary text without R code
+
+  |                                                                         |......                                                           |   9%
+label: getGEOHelp (with options) 
+List of 3
+ $ echo      : logi FALSE
+ $ cache     : logi TRUE
+ $ cache.vars: chr "GEOquery.getGEO.path"
+
+  |                                                                         |......                                                           |  10%
+   inline R code fragments
+
+  |                                                                         |.......                                                          |  10%
+label: dnldGSE (with options) 
+List of 3
+ $ eval      : logi FALSE
+ $ cache     : logi FALSE
+ $ cache.vars: chr ""
+
+  |                                                                         |.......                                                          |  11%
+  ordinary text without R code
+
+  |                                                                         |........                                                         |  12%
+label: peekGSE (with options) 
+List of 5
+ $ eval      : logi TRUE
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ fig.width : num 11
+ $ fig.height: num 6
+
+  |                                                                         |........                                                         |  13%
+   inline R code fragments
+
+  |                                                                         |.........                                                        |  14%
+label: cleanGSE (with options) 
+List of 6
+ $ echo      : symbol T
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi TRUE
+ $ fig.width : num 8
+ $ fig.height: num 6
+
+  |                                                                         |..........                                                       |  15%
+  ordinary text without R code
+
+  |                                                                         |..........                                                       |  16%
+label: poolGSE (with options) 
+List of 4
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ fig.width : num 12
+ $ fig.height: num 6
+
+  |                                                                         |...........                                                      |  17%
+  ordinary text without R code
+
+
+label: svaBatchAdjust (with options) 
+List of 4
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ fig.width : num 12
+ $ fig.height: num 6
+
+  |                                                                         |............                                                     |  18%
+  ordinary text without R code
+
+  |                                                                         |............                                                     |  19%
+label: getTrainTest (with options) 
+List of 2
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+
+  |                                                                         |.............                                                    |  20%
+  ordinary text without R code
+
+  |                                                                         |..............                                                   |  21%
+label: saveGeneSets (with options) 
+List of 2
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+
+  |                                                                         |..............                                                   |  22%
+  ordinary text without R code
+
+  |                                                                         |...............                                                  |  23%
+label: setTrainParam
+
+  ordinary text without R code
+
+  |                                                                         |................                                                 |  24%
+label: doMC (with options) 
+List of 1
+ $ echo: symbol F
+
+  |                                                                         |................                                                 |  25%
+   inline R code fragments
+
+  |                                                                         |.................                                                |  26%
+label: stepLDAFit (with options) 
+List of 4
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi FALSE
+ $ echo      : logi FALSE
+
+  |                                                                         |..................                                               |  27%
+  ordinary text without R code
+
+  |                                                                         |..................                                               |  28%
+label: stepLDAFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi FALSE
+
+  |                                                                         |...................                                              |  29%
+  ordinary text without R code
+
+  |                                                                         |...................                                              |  30%
+label: stepQDAFit (with options) 
+List of 4
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi FALSE
+ $ echo      : logi FALSE
+
+  |                                                                         |....................                                             |  30%
+  ordinary text without R code
+
+  |                                                                         |....................                                             |  31%
+label: stepQDAFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi FALSE
+
+  |                                                                         |.....................                                            |  32%
+  ordinary text without R code
+
+  |                                                                         |.....................                                            |  33%
+label: knnFit (with options) 
+List of 3
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi TRUE
+
+  |                                                                         |......................                                           |  34%
+  ordinary text without R code
+
+  |                                                                         |.......................                                          |  35%
+label: knnFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi TRUE
+
+  |                                                                         |.......................                                          |  36%
+  ordinary text without R code
+
+  |                                                                         |........................                                         |  37%
+label: pamFit (with options) 
+List of 3
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi TRUE
+
+
+  ordinary text without R code
+
+  |                                                                         |.........................                                        |  38%
+label: pamFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi TRUE
+
+  |                                                                         |.........................                                        |  39%
+  ordinary text without R code
+
+  |                                                                         |..........................                                       |  40%
+label: rfFit (with options) 
+List of 3
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi TRUE
+
+  |                                                                         |...........................                                      |  41%
+  ordinary text without R code
+
+  |                                                                         |...........................                                      |  42%
+label: rfFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi TRUE
+
+  |                                                                         |............................                                     |  43%
+  ordinary text without R code
+
+
+label: svmRadialFit (with options) 
+List of 3
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi TRUE
+
+  |                                                                         |.............................                                    |  44%
+  ordinary text without R code
+
+  |                                                                         |.............................                                    |  45%
+label: svmRadialFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi TRUE
+
+  |                                                                         |..............................                                   |  46%
+  ordinary text without R code
+
+  |                                                                         |...............................                                  |  47%
+label: gbmFit (with options) 
+List of 3
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi TRUE
+
+  |                                                                         |...............................                                  |  48%
+  ordinary text without R code
+
+  |                                                                         |................................                                 |  49%
+label: gbmFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi TRUE
+
+  |                                                                         |................................                                 |  50%
+  ordinary text without R code
+
+  |                                                                         |.................................                                |  50%
+label: xgbLinearFit (with options) 
+List of 3
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ eval      : logi TRUE
+
+  |                                                                         |.................................                                |  51%
+  ordinary text without R code
+
+  |                                                                         |..................................                               |  52%
+label: xgbLinearFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi TRUE
+
+  |                                                                         |..................................                               |  53%
+  ordinary text without R code
+
+  |                                                                         |...................................                              |  54%
+label: xgbTreeFit (with options) 
+List of 4
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+ $ echo      : logi FALSE
+ $ eval      : logi FALSE
+
+  |                                                                         |....................................                             |  55%
+  ordinary text without R code
+
+  |                                                                         |....................................                             |  56%
+label: xgbTreeFitPrint (with options) 
+List of 2
+ $ echo: symbol F
+ $ eval: logi FALSE
+
+  |                                                                         |.....................................                            |  57%
+  ordinary text without R code
+
+
+label: getModels
+  |                                                                         |......................................                           |  58%
+  ordinary text without R code
+
+  |                                                                         |......................................                           |  59%
+label: compTimes (with options) 
+List of 2
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+
+  |                                                                         |.......................................                          |  60%
+  ordinary text without R code
+
+  |                                                                         |........................................                         |  61%
+label: trainAccuracy (with options) 
+List of 2
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+
+  |                                                                         |........................................                         |  62%
+  ordinary text without R code
+
+  |                                                                         |.........................................                        |  63%
+label: OOSTrainAccuracy (with options) 
+List of 2
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+
+
+  ordinary text without R code
+
+  |                                                                         |..........................................                       |  64%
+label: testAccuracy (with options) 
+List of 2
+ $ cache     : logi TRUE
+ $ cache.vars: chr ""
+
+  |                                                                         |..........................................                       |  65%
+  ordinary text without R code
+
+  |                                                                         |...........................................                      |  66%
+label: CompROCTrain (with options) 
+List of 4
+ $ cache     : logi TRUE
+ $ cache.vars: chr "Set.Train.roc.mtx.lst"
+ $ fig.height: num 6
+ $ fig.width : num 11
+
+  |                                                                         |............................................                     |  67%
+  ordinary text without R code
+
+  |                                                                         |............................................                     |  68%
+label: CompROCOOSTrain (with options) 
+List of 4
+ $ cache     : logi FALSE
+ $ cache.vars: chr ""
+ $ fig.height: num 6
+ $ fig.width : num 11
+
+  |                                                                         |.............................................                    |  69%
+  ordinary text without R code
+
+  |                                                                         |.............................................                    |  70%
+label: CompROCIndivOOSTrain (with options) 
+List of 4
+ $ cache     : logi FALSE
+ $ cache.vars: chr "Set.Train.indiv_osProbClass1.mtx"
+ $ fig.height: num 6
+ $ fig.width : num 11
+
+  |                                                                         |..............................................                   |  70%
+  ordinary text without R code
+
+  |                                                                         |..............................................                   |  71%
+label: CompOOSSet.TrainProbClass1 (with options) 
+List of 4
+ $ cache     : logi FALSE
+ $ cache.vars: chr ""
+ $ fig.height: num 12
+ $ fig.width : num 12
+
+  |                                                                         |...............................................                  |  72%
+  ordinary text without R code
+
+  |                                                                         |...............................................                  |  73%
+label: varImpHelp (with options) 
+List of 3
+ $ echo      : logi FALSE
+ $ cache     : logi TRUE
+ $ cache.vars: chr "caret.varImp.path"
+
+  |                                                                         |................................................                 |  74%
+   inline R code fragments
+
+  |                                                                         |.................................................                |  75%
+label: readGeneSets (with options) 
+List of 1
+ $ echo: symbol T
+
+  |                                                                         |.................................................                |  76%
+  ordinary text without R code
+
+  |                                                                         |..................................................               |  77%
+label: varImp (with options) 
+List of 1
+ $ cache: logi FALSE
+
+
+  ordinary text without R code
+
+  |                                                                         |...................................................              |  78%
+label: clusterPrelim
+  |                                                                         |...................................................              |  79%
+   inline R code fragments
+
+  |                                                                         |....................................................             |  80%
+label: pamCluster
+  |                                                                         |.....................................................            |  81%
+  ordinary text without R code
+
+  |                                                                         |.....................................................            |  82%
+label: ViewPamCluster (with options) 
+List of 2
+ $ fig.width : num 12
+ $ fig.height: num 12
+
+  |                                                                         |......................................................           |  83%
+  ordinary text without R code
+
+
+label: BagClust2 (with options) 
+List of 2
+ $ cache     : symbol T
+ $ cache.vars: chr ""
+
+  |                                                                         |.......................................................          |  84%
+  ordinary text without R code
+
+  |                                                                         |.......................................................          |  85%
+label: lkBagClust2 (with options) 
+List of 2
+ $ fig.height: num 12
+ $ fig.width : num 12
+
+  |                                                                         |........................................................         |  86%
+  ordinary text without R code
+
+  |                                                                         |.........................................................        |  87%
+label: tSNEPrelim
+  |                                                                         |.........................................................        |  88%
+  ordinary text without R code
+
+  |                                                                         |..........................................................       |  89%
+label: tSNE (with options) 
+List of 2
+ $ cache     : symbol T
+ $ cache.vars: chr ""
+
+  |                                                                         |..........................................................       |  90%
+  ordinary text without R code
+
+  |                                                                         |...........................................................      |  90%
+label: tsnePAMCluster
+  |                                                                         |...........................................................      |  91%
+  ordinary text without R code
+
+  |                                                                         |............................................................     |  92%
+label: ViewTsnePamCluster (with options) 
+List of 3
+ $ fig.width : num 12
+ $ fig.height: num 12
+ $ results   : chr "hold"
+
+  |                                                                         |............................................................     |  93%
+  ordinary text without R code
+
+  |                                                                         |.............................................................    |  94%
+label: tsneBagClust2 (with options) 
+List of 2
+ $ cache     : symbol T
+ $ cache.vars: chr ""
+
+  |                                                                         |..............................................................   |  95%
+  ordinary text without R code
+
+  |                                                                         |..............................................................   |  96%
+label: lktsneBagClust2 (with options) 
+List of 2
+ $ fig.height: num 12
+ $ fig.width : num 12
+
+  |                                                                         |...............................................................  |  97%
+   inline R code fragments
+
+
+label: unnamed-chunk-1 (with options) 
+List of 1
+ $ echo: logi FALSE
+
+  |                                                                         |................................................................ |  98%
+  ordinary text without R code
+
+  |                                                                         |................................................................ |  99%
+label: unnamed-chunk-2 (with options) 
+List of 1
+ $ echo: logi FALSE
+
+
+output file: M1A-CRC.knit.md
+
+/usr/bin/pandoc +RTS -K512m -RTS M1A-CRC.utf8.md --to html --from markdown+autolink_bare_uris+ascii_identifiers+tex_math_single_backslash --output M1A-CRC.html --smart --email-obfuscation none --self-contained --standalone --section-divs --table-of-contents --toc-depth 3 --template /usr/local/lib/R/site-library/BiocStyle/resources/html/template.html --no-highlight --variable highlightjs=1 --number-sections --css /usr/local/lib/R/site-library/BiocStyle/resources/html/bioconductor.css --include-in-header /tmp/RtmpPFYqy9/rmarkdown-str4e363bd9f27e.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --bibliography ../../bibFiles/CRC.bib --filter /usr/bin/pandoc-citeproc 
+
+Output created: M1A-CRC.html

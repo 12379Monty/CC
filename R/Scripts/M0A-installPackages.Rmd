@@ -1,0 +1,246 @@
+---
+title: "Intalling Packages for Predictive Analytics"
+author: "Francois Collin"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  BiocStyle::html_document:
+    toc: true
+    # does this have an effect
+    fig_caption: yes    
+    # this has no effect
+    number_sections: yes
+bibliography: ../../bibFiles/bibFile.bib
+#csl: ../acm-sig-proceedings.csl  - doest work with pandoc-siteproc
+csl: ../../bibFiles/cell-numeric.csl
+#biblio-style: acm
+link-citations: true
+vignette: >
+ %\VignetteEncoding{UTF-8}
+---
+
+<style type="text/css">
+
+body{ /* Normal  */ 
+ font-size: 14px; 
+}
+td {  /* Table  */ 
+ font-size: 12; 
+}
+h1.title { 
+ font-size: 28px; color: DarkGreen; 
+}
+h1 { /* Header 1 */ 
+ font-size: 24px; color: DarkBlue; 
+}
+h2 { /* Header 2 */ 
+ font-size: 18px; color: DarkBlue; 
+}
+h3 { /* Header 3 */ 
+ font-size: 18px;
+ font-family: "Times New Roman", Times, serif;
+ color: DarkBlue;
+}
+code.r{ /* Code block */
+    font-size: 12px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 14px;
+}
+</style>
+
+```{r GlobalOptions, results="hide", include=FALSE, cache=FALSE}
+knitr::opts_knit$set(stop_on_error = 2L) #really make it stop
+#knitr::dep_auto()
+```
+
+
+```{r Prelims, include=F, echo=FALSE, results='hide', message=FALSE} 
+
+ FN <- "M0A-installPackages"
+
+  suppressMessages(require(rmarkdown))
+  suppressMessages(require(knitr))
+  options(stringsAsFactors=F) 
+
+  # Shotcuts for knitting and redering while in R session
+  kk <- function(n='') knit2html(paste("Scripts/t", n, sep=''), envir=globalenv(),
+        output=paste('Scripts/',FN,".html", sep=''))
+
+  rr <- function(n='') render(paste("Scripts/t", n, sep=''), envir=globalenv(),
+        output_file=paste(FN,".html", sep=''), output_dir='Scripts')
+
+  bb <- function(n='') browseURL(paste('Scripts/',FN,".html", sep=''))
+
+  # The usual shorcuts
+  zz <- function(n='') source(paste("Scripts/t", n, sep=''))
+
+  if(file.exists('/Users/francois/Dropbox/PredictiveModeling/CC/R/'))
+  WRKDIR <- '/Users/francois/Dropbox/PredictiveModeling/CC/R/'  else
+  WRKDIR <- '/mnt100/home/Dropbox/PredictiveModeling/CC/R'
+
+  if(!file.exists(WRKDIR)) stop("WRKDIR ERROR", WRKDIR)
+
+  # do once
+  #setwd(WRKDIR)
+
+  # file rmarkdown file management options: cache, figures
+  #cache_DIR <- file.path(WRKDIR, 'Scripts', 'cache/M0A/')
+  #suppressMessages(dir.create(cache_DIR, recursive=T))
+  #opts_chunk$set(cache.path=cache_DIR)
+
+  #figure_DIR <- file.path(WRKDIR, 'Scripts', 'figure/M0A/')
+  #suppressMessages(dir.create(figure_DIR, recursive=T))
+  #opts_chunk$set(fig.path=figure_DIR)
+
+```
+
+```{r runParam, echo=F}
+ INSTALL <- T
+```
+
+***
+# Install R Packages {#Install}
+
+## Packages for Predictive Analytics {#InstPred}
+
+
+* Example citation: 
+This strategy draws ideas from the "tight clustering" algorithm used to find groups of genes in microarray data in [@tseng2005].
+
+```{r SDDS, eval=F, echo=F}
+
+ ### SDDA had to be fetched from archives
+ install.packages('SDDA_1.0-5.tar.gz')
+
+```
+<!-- ***************************************************** -->
+
+```{r installPredictive, eval=T}
+
+ #cat("Installing caret and dependencies\n")
+ #if(INSTALL) install.packages("caret", dependencies = c("Depends", "Suggests"))
+
+ RequiredPkgs.vec <- 
+  c('GEOquery', 'hgu133plus2.db',
+    'caret', "gpls", "logicFS", "vbmp",'pROC','pamr','randomForest',
+    'kernlab', 'gbm', 'xgboost', 'SDDA')
+
+ InstalledPkgs.vec <- installed.packages()[,1]
+ ToInstall.vec <- setdiff(RequiredPkgs.vec,InstalledPkgs.vec)
+
+ cat("Pkgs to install:", ifelse(length(ToInstall.vec),ToInstall.vec,'None'), '\n')
+
+ if(INSTALL & length(ToInstall.vec)){
+  source("http://www.bioconductor.org/biocLite.R")
+  biocLite(ToInstall.vec, dependencies=F)
+ }
+
+```
+
+## Check Installed Packages
+
+```{r checkInstall}
+
+ for(PKG in ToInstall.vec){
+  cat("Checking", PKG, '\n')
+  tryCatch(library(PKG))
+ }
+
+```
+
+<!-- Put bib here If applicable 
+-->
+# References
+<div id="refs"></div>
+
+***
+# Parameter settings
+  * WRKDIR = `r WRKDIR`
+  * FN = `r FN`
+  * Scripts = Scripts
+  * RUN DATE = `r date()`
+  * INSTALL = `r INSTALL`
+
+```{r, echo=F}
+ sessionInfo()
+```
+
+
+```{r, echo=F}
+  knit_exit()
+```
+
+### ARCHIVAL CODE BELOW
+
+``` 
+[R blog](https://www.r-bloggers.com/how-to-install-r-on-linux-ubuntu-16-04-xenial-xerus/)
+ sudo echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" | sudo tee -a /etc/apt/sources.list
+
+ gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
+
+ gpg -a --export E084DAB9 | sudo apt-key add -
+
+ sudo apt-get update
+ sudo apt-get install r-base r-base-dev
+
+...
+```
+
+### Update R
+
+[updateR](https://andreacirilloblog.wordpress.com/2015/10/22/updater-package-update-r-version-with-a-function-on-mac-osx/)
+
+```{r updateR, eval=F}
+  # DO ONCE
+  require(devtools)
+  install_github('andreacirilloac/updateR')
+ 
+  suppressMessages(require(updateR))
+
+  updateR(admin_password = "***os_admin_user_password***")
+  #### Everything went smoothly, R was updated to R version 3.4.0 (2017-04-21) -- "You Stupid Darkness"
+
+```
+
+
+### Upgrade bioconductor
+
+```{r upgradeBioc, eval=F}
+  source("http://www.bioconductor.org/biocLite.R")
+  biocLite("BiocUpgrade")
+
+  # check versions
+  #### Error: Bioconductor version 3.5 can be upgraded, but only to 'devel'; see ?useDevel.
+
+```
+<!-- ***************************************************** -->
+
+
+
+```{r installGithub, echo=F, eval=F}
+ require(devtools)
+ install_github("RS3","Gastrograph")
+
+```
+
+```
+ ### This doesn't work!
+ ### Dynamic rmarkdown requires shiny app!!!
+
+ cat("Pkgs to install:", ToIntall.vec, '\n')
+ CONTINUE <- F
+ while(!CONTINUE) {
+  cat("Continue? (Yes/No): ")
+  Ans <- scan("stdin", what='',  n=1, quiet = TRUE) 
+  if(Ans=='No') q('no')
+  if(Ans=='Yes') CONTINUE <- T
+ }
+
+<!-- To run
+sudo nohup Rscript -e "knitr::knit2html('M0A-installPackages.Rmd')" > M0A-installPackages.log  &
+
+# Or
+sudo nohup Rscript -e "rmarkdown::render('M0A-installPackages.Rmd')" > M0A-installPackages.log  &
+
+-->
+
