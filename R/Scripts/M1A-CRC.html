@@ -10,7 +10,7 @@
 
 <meta name="author" content="Francois Collin" />
 
-<meta name="date" content="2017-07-17" />
+<meta name="date" content="2017-07-18" />
 
 <title>Classification and Clustering: Case Study with CRC Gene Expression Data</title>
 
@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", function() {
 <div id="header">
 <h1 class="title">Classification and Clustering: Case Study with CRC Gene Expression Data</h1>
 <h4 class="author"><em>Francois Collin</em></h4>
-<h4 class="date"><em>July 17, 2017</em></h4>
+<h4 class="date"><em>July 18, 2017</em></h4>
 </div>
 
 <h1>Contents</h1>
@@ -2395,7 +2395,7 @@ These methods dont work.
 </div>
 <div id="look-at-variable-importance" class="section level2">
 <h2><span class="header-section-number">5.5</span> Look at Variable Importance</h2>
-<p>The <code>caret</code> package provides methods to extract variable importance through the <a href="./help_files/caret.varImp.thml">varImp</a> function. Here we will extract these assessments for each model and compare with genes which have been identified as associated with MSS status in other studies:</p>
+<p>The <code>caret</code> package provides methods to extract variable importance through the <a href="./help_files/caret.varImp.html">varImp</a> function. Here we will extract these assessments for each model and compare with genes which have been identified as associated with MSS status in other studies:</p>
 <ul>
 <li>BANERJEA <span class="citation">[<a href="#ref-Banerjea:2004aa">19</a>]</span></li>
 <li>CROCE <span class="citation">[<a href="#ref-CROCE">20</a>]</span></li>
@@ -2432,29 +2432,8 @@ These methods dont work.
     varImp.vec &lt;- impVar.vec[top20.ndx]
     names(varImp.vec) &lt;- rownames(varImp(FIT)$imp)[top20.ndx]
     varImp.vec
-    })</code></pre>
-<pre><code>## Loading required package: gbm</code></pre>
-<pre><code>## Loading required package: survival</code></pre>
-<pre><code>## 
-## Attaching package: 'survival'</code></pre>
-<pre><code>## The following object is masked from 'package:caret':
-## 
-##     cluster</code></pre>
-<pre><code>## Loading required package: splines</code></pre>
-<pre><code>## Loaded gbm 2.1.3</code></pre>
-<pre><code>## Loading required package: plyr</code></pre>
-<pre><code>## Loading required package: pamr</code></pre>
-<pre><code>## Loading required package: cluster</code></pre>
-<pre><code>## Loading required package: randomForest</code></pre>
-<pre><code>## randomForest 4.6-12</code></pre>
-<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<pre><code>## 
-## Attaching package: 'randomForest'</code></pre>
-<pre><code>## The following object is masked from 'package:ggplot2':
-## 
-##     margin</code></pre>
-<pre><code>## Loading required package: xgboost</code></pre>
-<pre class="r"><code>  names(Set.ModelFit.Top20.lst) &lt;- setdiff(names(Set.ModelFit.lst),
+    })
+  names(Set.ModelFit.Top20.lst) &lt;- setdiff(names(Set.ModelFit.lst),
                                    c(&quot;knnFit&quot;,&quot;sddaLDAFit&quot;,&quot;sddaQDAFit&quot;))
 
   Top20.Name.vec &lt;- unique(do.call('c', lapply(Set.ModelFit.Top20.lst, function(VV) names(VV))))
@@ -2674,9 +2653,9 @@ Multidimensional scaling can be used to get a two-dimensional representation of 
  # Compute kappa for display on figure
  # (Only makes sense for BestK==2)
  kappa.v &lt;- NA
- if(BestK == 2) kappa.v &lt;- getKappa(Expr.pam$clustering, Train.Label.vec)</code></pre>
-<pre><code>## Loading required package: concord</code></pre>
-<pre class="r"><code> #######################################
+ if(BestK == 2) kappa.v &lt;- getKappa(Expr.pam$clustering, Train.Label.vec)
+
+ #######################################
  # Visualization
  #######################################
  old_par &lt;- par(mfrow=c(1,1), oma=c(8,1,5,1), #mar=c(4.2, 3.2, 1.1, 0.2),
@@ -3255,7 +3234,7 @@ SKIP &lt;- function() {
 <li>FN = M1A-CRC</li>
 <li>Scripts = Scripts</li>
 <li>EXT_DATA = /mnt100/home/Dropbox/PredictiveModeling/CC//extData</li>
-<li>RUN DATE = Mon Jul 17 20:29:15 2017</li>
+<li>RUN DATE = Tue Jul 18 04:22:18 2017</li>
 </ul>
 <pre><code>## R version 3.4.0 (2017-04-21)
 ## Platform: x86_64-pc-linux-gnu (64-bit)
@@ -3274,32 +3253,41 @@ SKIP &lt;- function() {
 ## [11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
 ## 
 ## attached base packages:
-## [1] splines   parallel  stats     graphics  grDevices utils     datasets 
-## [8] base     
+##  [1] splines   stats4    methods   parallel  stats     graphics  grDevices
+##  [8] utils     datasets  base     
 ## 
 ## other attached packages:
-##  [1] concord_1.4-9       xgboost_0.6-4       randomForest_4.6-12
-##  [4] pamr_1.55           cluster_2.0.6       plyr_1.8.4         
-##  [7] gbm_2.1.3           survival_2.41-3     pROC_1.10.0        
-## [10] doMC_1.3.4          iterators_1.0.8     foreach_1.4.3      
-## [13] caret_6.0-76        ggplot2_2.2.1       lattice_0.20-35    
-## [16] knitr_1.16          rmarkdown_1.6       BiocStyle_2.4.0    
+##  [1] Rtsne_0.13           concord_1.4-9        xgboost_0.6-4       
+##  [4] plyr_1.8.4           gbm_2.1.3            kernlab_0.9-25      
+##  [7] randomForest_4.6-12  pamr_1.55            survival_2.41-3     
+## [10] cluster_2.0.6        sva_3.24.4           BiocParallel_1.10.1 
+## [13] genefilter_1.58.1    mgcv_1.8-17          nlme_3.1-131        
+## [16] hgu133plus2.db_3.2.3 org.Hs.eg.db_3.4.1   AnnotationDbi_1.38.1
+## [19] IRanges_2.10.2       S4Vectors_0.14.3     GEOquery_2.42.0     
+## [22] Biobase_2.36.2       BiocGenerics_0.22.0  pROC_1.10.0         
+## [25] doMC_1.3.4           iterators_1.0.8      foreach_1.4.3       
+## [28] caret_6.0-76         ggplot2_2.2.1        lattice_0.20-35     
+## [31] knitr_1.16           rmarkdown_1.6        BiocStyle_2.4.0     
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] Rcpp_0.12.12       highr_0.6          nloptr_1.0.4      
-##  [4] compiler_3.4.0     methods_3.4.0      tools_3.4.0       
-##  [7] digest_0.6.12      lme4_1.1-13        evaluate_0.10.1   
-## [10] tibble_1.3.3       gtable_0.2.0       nlme_3.1-131      
-## [13] mgcv_1.8-17        rlang_0.1.1        Matrix_1.2-10     
-## [16] yaml_2.1.14        SparseM_1.77       stringr_1.2.0     
-## [19] MatrixModels_0.4-1 stats4_3.4.0       rprojroot_1.2     
-## [22] grid_3.4.0         nnet_7.3-12        data.table_1.10.4 
-## [25] minqa_1.2.4        kernlab_0.9-25     reshape2_1.4.2    
-## [28] car_2.1-5          magrittr_1.5       backports_1.1.0   
-## [31] scales_0.4.1       codetools_0.2-15   ModelMetrics_1.1.0
-## [34] htmltools_0.3.6    MASS_7.3-47        pbkrtest_0.4-7    
-## [37] colorspace_1.3-2   quantreg_5.33      stringi_1.1.5     
-## [40] lazyeval_0.2.0     munsell_0.4.3</code></pre>
+##  [1] httr_1.2.1         bit64_0.9-7        highr_0.6         
+##  [4] blob_1.1.0         yaml_2.1.14        RSQLite_2.0       
+##  [7] backports_1.1.0    quantreg_5.33      limma_3.32.2      
+## [10] digest_0.6.12      minqa_1.2.4        colorspace_1.3-2  
+## [13] htmltools_0.3.6    Matrix_1.2-10      XML_3.98-1.9      
+## [16] pkgconfig_2.0.1    SparseM_1.77       xtable_1.8-2      
+## [19] scales_0.4.1       lme4_1.1-13        MatrixModels_0.4-1
+## [22] tibble_1.3.3       annotate_1.54.0    car_2.1-5         
+## [25] nnet_7.3-12        lazyeval_0.2.0     pbkrtest_0.4-7    
+## [28] magrittr_1.5       memoise_1.1.0      evaluate_0.10.1   
+## [31] MASS_7.3-47        tools_3.4.0        data.table_1.10.4 
+## [34] matrixStats_0.52.2 stringr_1.2.0      munsell_0.4.3     
+## [37] compiler_3.4.0     rlang_0.1.1        grid_3.4.0        
+## [40] RCurl_1.95-4.8     nloptr_1.0.4       bitops_1.0-6      
+## [43] gtable_0.2.0       ModelMetrics_1.1.0 codetools_0.2-15  
+## [46] DBI_0.7            reshape2_1.4.2     R6_2.2.2          
+## [49] bit_1.1-12         rprojroot_1.2      stringi_1.1.5     
+## [52] Rcpp_0.12.12</code></pre>
 </div>
 
 

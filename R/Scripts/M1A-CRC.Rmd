@@ -1570,7 +1570,7 @@ classify correctly.
 
 ```{r varImpHelp, echo=FALSE, cache=TRUE, cache.vars='caret.varImp.path'}
  # CHANGE TO CLEAR CACHE .
- caret.varImp.path <- file.path(help_DIR, 'caret.varImp.thml')
+ caret.varImp.path <- file.path(help_DIR, 'caret.varImp.html')
  static_help("caret", "varImp", out=caret.varImp.path)
 ```
 
